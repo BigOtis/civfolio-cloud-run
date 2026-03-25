@@ -65,17 +65,11 @@ const improvementOffsets = [
   { x: 70, y: 48 },
 ] as const;
 
-const cityBannerLayout: Record<
-  string,
-  { dx: number; dy: number; anchor: "start" | "middle" | "end" }
-> = {
-  popcurrent: { dx: 0, dy: -72, anchor: "middle" },
-  "polylogue": { dx: 0, dy: -78, anchor: "middle" },
-  "robot-future": { dx: 58, dy: -10, anchor: "start" },
-  "ibm-support-innovation": { dx: 48, dy: -4, anchor: "start" },
-  "busters-td": { dx: 44, dy: -6, anchor: "start" },
-  "character-chat": { dx: -44, dy: -6, anchor: "end" },
-  otisfuse: { dx: 34, dy: -34, anchor: "start" },
+const cityBannerOffsetY: Record<string, number> = {
+  popcurrent: -76,
+  polylogue: -82,
+  otisfuse: -62,
+  civfolio: -56,
 };
 
 const cityAdornmentLayout: Record<string, { dx: number; dy: number; scale?: number }> = {
@@ -295,6 +289,21 @@ export function WorldExplorer({
     github.repos[`${selectedWorkPanel.retained.code.repo.owner}/${selectedWorkPanel.retained.code.repo.name}`];
   const introProgress = introSequence.length > 0 ? (introIndex + 1) / introSequence.length : 0;
   const viewportSize = useMemo(() => ({ width: world.width, height: world.height }), [world.height, world.width]);
+  const hoveredGreatWorkEntry = useMemo(() => {
+    if (!hoveredGreatWork) {
+      return null;
+    }
+
+    for (const city of visibleCities) {
+      for (const item of city.greatWorks) {
+        if ((!item.unlockYear || item.unlockYear <= selectedYear) && `${city.slug}:${item.title}` === hoveredGreatWork) {
+          return { city, item };
+        }
+      }
+    }
+
+    return null;
+  }, [hoveredGreatWork, selectedYear, visibleCities]);
   const terrainAtPoint = useCallback((x: number, y: number) => {
     return world.hexes.reduce<{ terrain: (typeof world.hexes)[number]["terrain"]; distance: number }>(
       (closest, hex) => {
@@ -559,6 +568,57 @@ export function WorldExplorer({
           }
         : worldPointToScreen(unit.worldX, unit.worldY)),
     });
+  }
+
+  function renderGreatWork(city: (typeof visibleCities)[number], item: (typeof visibleCities)[number]["greatWorks"][number], foreground = false) {
+    const key = `${city.slug}:${item.title}`;
+    const isHovered = hoveredGreatWork === key;
+    const width = Math.max(128, item.title.length * 7.1 + 34);
+    const selected = selectedSlug === city.slug || introFocusSlug === city.slug;
+
+    return (
+      <g
+        key={`${key}-${foreground ? "front" : "back"}`}
+        transform={`translate(${city.x + item.xOffset} ${city.y + item.yOffset})`}
+        opacity={foreground ? 1 : isHovered ? 0.22 : selectedSlug && selectedSlug !== city.slug ? 0.5 : 0.82}
+        style={foreground ? { filter: "url(#city-outer-glow)" } : undefined}
+      >
+        <g
+          transform={foreground ? "translate(26 48) scale(1.04)" : "translate(26 48)"}
+          data-map-interactive={foreground ? undefined : "true"}
+          className={foreground ? undefined : "cursor-help"}
+          onMouseEnter={foreground ? undefined : () => setHoveredGreatWork(key)}
+          onMouseLeave={foreground ? undefined : () => setHoveredGreatWork((current) => (current === key ? null : current))}
+        >
+          <GreatWorkIllustration
+            discipline={city.discipline}
+            title={item.title}
+            active={selected || foreground}
+          />
+        </g>
+        <g
+          className="transition-opacity duration-150 ease-out"
+          opacity={foreground || isHovered ? 1 : 0}
+          pointerEvents="none"
+        >
+          <rect
+            x={0}
+            y={0}
+            width={width}
+            height={42}
+            rx={15}
+            fill={foreground ? "rgba(26,18,12,0.94)" : "rgba(26,18,12,0.82)"}
+            stroke={city.bannerTone}
+            strokeOpacity={0.86}
+            strokeWidth={1}
+          />
+          <circle cx={16} cy={21} r={4.5} fill={city.bannerTone} fillOpacity={0.82} />
+          <text x={28} y={25} fontSize={12} fill="#f7e8c7" style={{ letterSpacing: "0.08em" }}>
+            {item.title}
+          </text>
+        </g>
+      </g>
+    );
   }
 
   function nearestHexCenter(x: number, y: number) {
@@ -959,57 +1019,7 @@ export function WorldExplorer({
             {visibleCities.flatMap((city) =>
               city.greatWorks
                 .filter((item) => !item.unlockYear || item.unlockYear <= selectedYear)
-                .map((item) => (
-                  <g
-                    key={`${city.slug}-${item.title}`}
-                    transform={`translate(${city.x + item.xOffset} ${city.y + item.yOffset})`}
-                    opacity={selectedSlug && selectedSlug !== city.slug ? "0.5" : "0.82"}
-                  >
-                    {(() => {
-                      const key = `${city.slug}:${item.title}`;
-                      const isHovered = hoveredGreatWork === key;
-                      const width = Math.max(128, item.title.length * 7.1 + 34);
-                      return (
-                        <>
-                          <g
-                            transform="translate(26 48)"
-                            data-map-interactive="true"
-                            className="cursor-help"
-                            onMouseEnter={() => setHoveredGreatWork(key)}
-                            onMouseLeave={() => setHoveredGreatWork((current) => (current === key ? null : current))}
-                          >
-                            <GreatWorkIllustration
-                              discipline={city.discipline}
-                              title={item.title}
-                              active={selectedSlug === city.slug || introFocusSlug === city.slug}
-                            />
-                          </g>
-                          <g
-                            className="transition-opacity duration-150 ease-out"
-                            opacity={isHovered ? 1 : 0}
-                            pointerEvents="none"
-                          >
-                            <rect
-                              x={0}
-                              y={0}
-                              width={width}
-                              height={42}
-                              rx={15}
-                              fill="rgba(26,18,12,0.82)"
-                              stroke={city.bannerTone}
-                              strokeOpacity="0.76"
-                              strokeWidth={1}
-                            />
-                            <circle cx={16} cy={21} r={4.5} fill={city.bannerTone} fillOpacity={0.82} />
-                            <text x={28} y={25} fontSize={12} fill="#f7e8c7" style={{ letterSpacing: "0.08em" }}>
-                              {item.title}
-                            </text>
-                          </g>
-                        </>
-                      );
-                    })()}
-                  </g>
-                )),
+                .map((item) => renderGreatWork(city, item)),
             )}
 
             {visibleCities.flatMap((city) => {
@@ -1054,17 +1064,8 @@ export function WorldExplorer({
               const showBanner = true;
               const bannerWidth = city.title.length * 7.9 + 26;
               const adornmentLayout = cityAdornmentLayout[city.slug];
-              const bannerLayout = cityBannerLayout[city.slug] ?? {
-                dx: city.radius + 14,
-                dy: -city.radius - 12,
-                anchor: "start" as const,
-              };
-              const bannerX =
-                bannerLayout.anchor === "middle"
-                  ? -bannerWidth / 2
-                  : bannerLayout.anchor === "end"
-                    ? -bannerWidth
-                    : 0;
+              const bannerDy = cityBannerOffsetY[city.slug] ?? -(city.radius + 30);
+              const bannerX = -bannerWidth / 2;
               const textX = bannerX + 13;
 
               return (
@@ -1140,7 +1141,7 @@ export function WorldExplorer({
                     active={isSelected || isHovered}
                   />
                   {showBanner ? (
-                    <g transform={`translate(${bannerLayout.dx} ${bannerLayout.dy})`} opacity={isSelected ? 1 : 0.92}>
+                    <g transform={`translate(0 ${bannerDy})`} opacity={isSelected ? 1 : 0.92}>
                       <rect
                         x={bannerX}
                         width={bannerWidth}
@@ -1346,6 +1347,10 @@ export function WorldExplorer({
                 </g>
               );
             })}
+
+            {hoveredGreatWorkEntry
+              ? renderGreatWork(hoveredGreatWorkEntry.city, hoveredGreatWorkEntry.item, true)
+              : null}
           </g>
           <rect width={world.width} height={world.height} fill="url(#map-vignette)" pointerEvents="none" />
         </svg>
