@@ -1,12 +1,12 @@
 {
   "slug": "ibm-support-innovation",
-  "title": "IBM Support Innovation",
+  "title": "IBM Software Engineering",
   "discipline": "client",
-  "summary": "Internal tools, prototypes, and support automations built across z/OS, Docker, and OpenShift support at IBM.",
+  "summary": "A full IBM arc from support automation and developer tooling into AI product work for the z/OS team.",
   "description": [
-    "This is the enterprise capital in Phil's map. It captures the internal automation, rapid prototyping, support engineering, and customer-facing work that made up a major part of his professional career at IBM.",
-    "The public portfolio cannot expose the internal code directly, but it can represent the outcomes: automation, outage support, pre-sales prototypes, and multiple corporate awards for impact.",
-    "Today this city also represents Phil's current role as an AI Engineer for IBM z/OS, making it the practical and professional capital that anchors the rest of the world."
+    "This is the enterprise capital in Phil's map. It captures the full IBM career arc: starting in support, building automation and developer tools, and learning how to turn repeated operational pain into durable systems.",
+    "That foundation grew into broader software engineering across z/OS, Docker, OpenShift, and customer-facing support environments, with public-facing impact visible through the outcomes even when the internal code cannot be shown directly.",
+    "Today the city represents Phil's work as a software engineer focused on AI for the IBM z/OS organization, shipping practical AI capabilities and workflows that leverage agents like Bob."
   ],
   "importance": 92,
   "status": "active",
@@ -25,20 +25,20 @@
     {
       "kind": "image",
       "src": "/assets/works/ibm-support-innovation-shot.png",
-      "alt": "A role-focused dashboard mockup representing IBM z/OS AI engineering work.",
-      "caption": "A role-and-operations view representing enterprise automation, support, and AI systems work."
+      "alt": "A role-focused dashboard mockup representing IBM z/OS software engineering and AI work.",
+      "caption": "A role-and-operations view representing support automation, developer tooling, and modern AI systems work."
     },
     {
       "kind": "image",
       "src": "/assets/works/ibm-support-innovation.svg",
-      "alt": "An industrial walled city representing IBM support innovation work.",
-      "caption": "A heavily fortified city built on automation, reliability, and enterprise support."
+      "alt": "An industrial walled city representing IBM software engineering work.",
+      "caption": "A heavily fortified city built on automation, reliability, internal tooling, and enterprise AI."
     }
   ],
   "greatWorks": [
     {
       "title": "Automation Citadel",
-      "summary": "Operational tooling and codified support knowledge that turned difficult systems work into repeatable leverage.",
+      "summary": "Operational tooling, support automation, and codified engineering knowledge that turned difficult systems work into repeatable leverage.",
       "xOffset": 96,
       "yOffset": -64,
       "unlockYear": 2020
@@ -49,18 +49,18 @@
     { "target": "popcurrent", "type": "inspiration", "label": "Practical automation mindset" }
   ],
   "highlights": [
-    "Worked directly with enterprise and government clients during outage scenarios.",
-    "Led support innovation focused on codifying and automating resolutions.",
-    "Built Python and JavaScript tools that earned multiple IBM awards for impact."
+    "Started in IBM support, working directly with enterprise and government clients during outage and escalation scenarios.",
+    "Built automation and developer tools that turned repeated support work into faster, more repeatable workflows.",
+    "Grew into AI-focused software engineering for the z/OS team, shipping practical capabilities tied to Bob and adjacent agent workflows."
   ],
   "productionQueue": [
-    "Keep carrying enterprise reliability lessons into public-facing products.",
-    "Translate internal operational thinking into reusable personal systems."
+    "Keep carrying enterprise reliability and support automation lessons into public-facing products.",
+    "Expand practical agent workflows and AI product thinking into reusable systems."
   ],
-  "techTree": ["Python", "JavaScript", "z/OS", "Docker", "OpenShift", "Enterprise support"],
-  "diplomacy": ["Clients", "Support teams", "Pre-sales stakeholders", "Global engineering orgs"],
-  "tradeRoutes": ["Automation", "Support tooling", "Outage response", "Rapid prototypes"],
-  "wonders": ["Award-winning internal tooling"],
+  "techTree": ["Python", "JavaScript", "z/OS", "Docker", "OpenShift", "Support automation", "Agentic AI"],
+  "diplomacy": ["Clients", "Support teams", "z/OS engineering", "Pre-sales stakeholders", "Global engineering orgs"],
+  "tradeRoutes": ["Automation", "Developer tooling", "Outage response", "Rapid prototypes", "AI workflows"],
+  "wonders": ["Award-winning internal tooling", "Bob-aligned AI product work"],
   "metrics": {
     "prestige": 9,
     "activity": 9,
@@ -69,8 +69,8 @@
   },
   "client": {
     "clientName": "IBM",
-    "sector": "Enterprise infrastructure and support",
-    "scope": ["Support automation", "Rapid prototyping", "Operational tooling", "Client escalation support"],
-    "deliverables": ["Internal web tools", "Codified resolutions", "Pre-sales prototypes", "Outage support workflows"]
+    "sector": "Enterprise infrastructure, developer tooling, and AI software",
+    "scope": ["Support automation", "Developer tooling", "Rapid prototyping", "Operational tooling", "AI product work"],
+    "deliverables": ["Internal web tools", "Codified resolutions", "Developer workflows", "Pre-sales prototypes", "Outage support workflows", "AI-assisted systems for z/OS"]
   }
 }

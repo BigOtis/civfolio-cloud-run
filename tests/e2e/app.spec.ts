@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const INTRO_TITLES = [
-  "Founding IBM Support Innovation",
+  "Founding IBM Software Engineering",
   "Founding Buster's TD",
   "Founding PopCurrent",
   "Founding Character Chat",
@@ -145,7 +145,7 @@ test.describe("world map interactions", () => {
     await openWorldMap(page, { introStepMs: 900, introFinalMs: 500 });
 
     await expect(page.getByTestId("intro-panel")).toBeVisible();
-    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Support Innovation");
+    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Software Engineering");
 
     const seenTitles = await sampleIntroTitles(page, 24, 220);
     expect(seenTitles).toEqual(INTRO_TITLES.slice(0, -1));
@@ -158,7 +158,7 @@ test.describe("world map interactions", () => {
     await expect(page.getByRole("button", { name: "Replay Intro" })).toHaveCount(0);
     await skipIntro(page);
     await page.getByRole("button", { name: "Replay Intro" }).click();
-    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Support Innovation");
+    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Software Engineering");
 
     await collectIntroTitles(page, INTRO_TITLES);
 
@@ -166,11 +166,11 @@ test.describe("world map interactions", () => {
     await expect(page.locator("body")).toContainText(/Time progression\s*2026/i);
 
     await page.getByRole("button", { name: "Replay Intro" }).click();
-    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Support Innovation");
+    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Software Engineering");
     await skipIntro(page);
     await expect(page.locator("body")).toContainText(/Time progression\s*2026/i);
 
-    await expect(page.locator("body")).toContainText("IBM Support Innovation");
+    await expect(page.locator("body")).toContainText("IBM Software Engineering");
     await expect(page.locator("body")).toContainText("Robot Future");
     await expect(page.locator("body")).toContainText("Signal Beacon");
   });
@@ -182,7 +182,7 @@ test.describe("world map interactions", () => {
     await page.getByRole("button", { name: "Leader Profile" }).click();
     await expect(page.getByRole("heading", { name: "Phil Lopez", exact: true })).toBeVisible();
     await expect(page.getByText("Founding Principles")).toBeVisible();
-    await expect(page.getByText("Current office: AI Engineer for IBM z/OS")).toBeVisible();
+    await expect(page.getByText("Current office: IBM Software Engineer")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByText("Founding Principles")).toHaveCount(0);
 
@@ -332,7 +332,7 @@ test.describe("canonical routes", () => {
     await expect(page.getByRole("heading", { name: "Phil Lopez" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Signals" })).toBeVisible();
     await expect(page.getByRole("main").getByRole("link", { name: "GitHub" })).toBeVisible();
-    await expect(page.getByText("Current role: AI Engineer for IBM z/OS")).toBeVisible();
+    await expect(page.getByText("Current role: IBM Software Engineer")).toBeVisible();
   });
 
   test("work routes remain shareable", async ({ page }) => {

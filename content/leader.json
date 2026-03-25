@@ -1,8 +1,8 @@
 {
   "name": "Phil Lopez",
   "headline": "Leader of a builder civilization spanning AI systems, public experiments, and game development.",
-  "currentRole": "AI Engineer for IBM z/OS",
-  "summary": "Phil Lopez leads a small but fast-moving civilization of AI systems, support automations, public-facing experiments, and game projects. His empire started in enterprise reliability at IBM, expanded through AI product work and writing on Robot Future, and now pushes toward agentic tools that make people measurably more capable.",
+  "currentRole": "IBM Software Engineer",
+  "summary": "Phil Lopez leads a small but fast-moving civilization of AI systems, support automations, public-facing experiments, and game projects. His career at IBM began in frontline support and automation, where he built developer tools, codified operational knowledge, and turned repeated engineering pain into reusable systems. That path matured into AI-focused product work for the z/OS organization, where he now helps ship practical AI capabilities and agent-driven workflows, including work related to Bob.",
   "philosophy": [
     "Build real systems that increase the output of the people using them.",
     "Use AI to remove repetitive labor so human attention can move up the stack.",
@@ -17,8 +17,8 @@
     "Unreal Engine prototyping"
   ],
   "achievements": [
-    "Forged award-winning internal tools and automation systems at IBM.",
-    "Now serves as an AI Engineer for IBM z/OS.",
+    "Built award-winning automation systems and developer tools across IBM support and infrastructure workflows.",
+    "Now serves as a software engineer focused on AI initiatives for the IBM z/OS organization.",
     "Graduated from RIT with a BS/MS in Computer Science.",
     "Shipped public AI experiments, a live tech brand, a portfolio framework, and an Unreal Engine game project."
   ],
