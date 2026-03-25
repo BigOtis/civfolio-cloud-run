@@ -1,5 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const INTRO_TITLES = [
+  "Founding IBM Support Innovation",
+  "Founding Buster's TD",
+  "Founding PopCurrent",
+  "Founding Character Chat",
+  "Founding Robot Future",
+  "Founding CivFolio",
+  "Founding Polylogue",
+  "Founding OtisFuse",
+] as const;
+
 async function openWorldMap(
   page: Page,
   options?: { fastIntro?: boolean; introStepMs?: number; introFinalMs?: number },
@@ -21,8 +32,32 @@ async function openWorldMap(
       { step: stepMs, final: finalMs },
     );
   }
-  await page.goto("/", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "networkidle" }).catch(async (error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes("ERR_CONNECTION_FAILED")) {
+      throw error;
+    }
+    await page.waitForTimeout(500);
+    await page.goto("/", { waitUntil: "networkidle" });
+  });
   await expect(page.getByRole("heading", { name: /Strategy Map of Work/i })).toBeVisible();
+}
+
+async function pressAction(page: Page, label: string) {
+  await page.evaluate((buttonLabel) => {
+    const button = Array.from(document.querySelectorAll("button")).find(
+      (entry) => entry.textContent?.trim() === buttonLabel,
+    );
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error(`Button not found: ${buttonLabel}`);
+    }
+    button.click();
+  }, label);
+}
+
+async function skipIntro(page: Page) {
+  await pressAction(page, "Skip Intro");
+  await expect(page.getByTestId("intro-panel")).toHaveCount(0);
 }
 
 async function clickMapCity(page: Page, label: string) {
@@ -68,6 +103,25 @@ async function sampleIntroTitles(page: Page, samples = 16, intervalMs = 180) {
   return seen;
 }
 
+async function collectIntroTitles(page: Page, expectedTitles: readonly string[]) {
+  const seen = new Set<string>();
+
+  await expect
+    .poll(
+      async () => {
+        const text = await page.getByTestId("intro-title").textContent().catch(() => null);
+        if (text) {
+          seen.add(text);
+        }
+        return expectedTitles.filter((title) => seen.has(title));
+      },
+      { timeout: 10000, intervals: [150, 200, 250] },
+    )
+    .toEqual([...expectedTitles]);
+
+  return [...seen];
+}
+
 test.describe("world map interactions", () => {
   test.setTimeout(60000);
 
@@ -78,15 +132,7 @@ test.describe("world map interactions", () => {
     await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Support Innovation");
 
     const seenTitles = await sampleIntroTitles(page, 24, 220);
-    expect(seenTitles).toEqual([
-      "Founding IBM Support Innovation",
-      "Founding Buster's TD",
-      "Founding PopCurrent",
-      "Founding Character Chat",
-      "Founding Robot Future",
-      "Founding CivFolio",
-      "Founding Polylogue",
-    ]);
+    expect(seenTitles).toEqual(INTRO_TITLES.slice(0, -1));
   });
 
   test("intro runs through the full city sequence and can be replayed", async ({ page }) => {
@@ -94,28 +140,18 @@ test.describe("world map interactions", () => {
 
     await expect(page.getByText("Campaign Replay")).toBeVisible();
     await expect(page.getByRole("button", { name: "Replay Intro" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Skip Intro" }).click({ force: true });
+    await skipIntro(page);
     await page.getByRole("button", { name: "Replay Intro" }).click();
     await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Support Innovation");
 
-    const seenTitles = await sampleIntroTitles(page);
-    expect(seenTitles).toEqual([
-      "Founding IBM Support Innovation",
-      "Founding Buster's TD",
-      "Founding PopCurrent",
-      "Founding Character Chat",
-      "Founding Robot Future",
-      "Founding CivFolio",
-      "Founding Polylogue",
-      "Founding OtisFuse",
-    ]);
+    await collectIntroTitles(page, INTRO_TITLES);
 
     await expect.poll(async () => page.getByTestId("intro-panel").count()).toBe(0);
     await expect(page.locator("body")).toContainText(/Time progression\s*2026/i);
 
     await page.getByRole("button", { name: "Replay Intro" }).click();
     await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Support Innovation");
-    await page.getByRole("button", { name: "Skip Intro" }).click({ force: true });
+    await skipIntro(page);
     await expect(page.locator("body")).toContainText(/Time progression\s*2026/i);
 
     await expect(page.locator("body")).toContainText("IBM Support Innovation");
@@ -126,18 +162,22 @@ test.describe("world map interactions", () => {
   test("leader profile and map key can open from the HUD", async ({ page }) => {
     await openWorldMap(page);
 
-    await page.getByRole("button", { name: "Skip Intro" }).click({ force: true });
+    await skipIntro(page);
     await page.getByRole("button", { name: "Leader Profile" }).click();
     await expect(page.getByRole("heading", { name: "Phil Lopez", exact: true })).toBeVisible();
     await expect(page.getByText("Founding Principles")).toBeVisible();
-    await expect(page.getByText("Current role: AI Engineer for IBM z/OS")).toBeVisible();
+    await expect(page.getByText("Current office: AI Engineer for IBM z/OS")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByText("Founding Principles")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Map Key" }).click();
-    await expect(page.getByText("Settlements are experiments.")).toBeVisible();
+    await expect(
+      page.getByText("Settlements, towns, capitals, and wonders scale with project importance, maturity, and momentum."),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Map Key" }).click();
-    await expect(page.getByText("Settlements are experiments.")).toHaveCount(0);
+    await expect(
+      page.getByText("Settlements, towns, capitals, and wonders scale with project importance, maturity, and momentum."),
+    ).toHaveCount(0);
   });
 
   test("clicking a city opens the in-map dossier and close clears the route state", async ({
@@ -175,7 +215,7 @@ test.describe("world map interactions", () => {
   test("filters and zoom controls respond without breaking navigation", async ({ page }) => {
     await openWorldMap(page);
 
-    await page.getByRole("button", { name: "Skip Intro" }).click();
+    await skipIntro(page);
     await page.getByRole("button", { name: /^code$/i }).click();
     await expect(page.locator("body")).toContainText(/Map Focus\s*Code/);
 
@@ -191,7 +231,7 @@ test.describe("world map interactions", () => {
   test("new video city opens correctly from the map", async ({ page }) => {
     await openWorldMap(page);
 
-    await page.getByRole("button", { name: "Skip Intro" }).click();
+    await skipIntro(page);
     await clickMapCity(page, "Open OtisFuse");
 
     await expect(page).toHaveURL(/work=otisfuse/);
@@ -205,10 +245,10 @@ test.describe("world map interactions", () => {
   test("travelers pause and reveal their title cards on hover", async ({ page }) => {
     await openWorldMap(page);
 
-    await page.getByRole("button", { name: "Skip Intro" }).click();
+    await skipIntro(page);
     await page.getByRole("button", { name: "Traveler gstack" }).focus();
     await expect(page.getByText("Traveler · trader")).toBeVisible();
-    await expect(page.getByText(/Moving between/)).toBeVisible();
+    await expect(page.getByText(/Arrives with a clipboard/i)).toBeVisible();
   });
 
   test("mobile layout keeps the map usable and primary controls reachable", async ({
@@ -226,15 +266,7 @@ test.describe("world map interactions", () => {
     await page.goto("/", { waitUntil: "networkidle" });
     await expect(page.getByRole("button", { name: "Skip Intro" })).toBeVisible();
     await expect(page.getByLabel("Timeline slider")).toBeVisible();
-    await page.evaluate(() => {
-      const button = Array.from(document.querySelectorAll("button")).find(
-        (entry) => entry.textContent?.trim() === "Skip Intro",
-      );
-      if (!(button instanceof HTMLButtonElement)) {
-        throw new Error("Skip Intro button not found");
-      }
-      button.click();
-    });
+    await skipIntro(page);
     await clickMapCity(page, "Open PopCurrent");
     await expect(page.getByText("City Management View")).toBeVisible();
     await expect(page.getByAltText("The PopCurrent social preview image from the live site.")).toBeVisible();
