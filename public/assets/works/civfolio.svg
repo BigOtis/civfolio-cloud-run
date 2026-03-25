@@ -1,0 +1,11 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#11263D"/>
+  <path d="M0 485C152 378 280 362 408 390C536 418 687 502 814 499C941 496 1041 435 1200 314V720H0V485Z" fill="#1B3E63"/>
+  <path d="M94 513L276 332L460 448L648 238L816 365L1010 202L1120 296V720H94V513Z" fill="#3D7050"/>
+  <circle cx="648" cy="238" r="58" fill="#F4D38D"/>
+  <circle cx="648" cy="238" r="100" stroke="#F4D38D" stroke-opacity="0.35" stroke-width="10"/>
+  <path d="M276 332L460 448L648 238L816 365L1010 202" stroke="#F1C981" stroke-width="10" stroke-linecap="round"/>
+  <rect x="584" y="166" width="128" height="144" rx="16" fill="#F5E4BE"/>
+  <rect x="182" y="560" width="836" height="78" rx="16" fill="#25170F" fill-opacity="0.72"/>
+  <text x="222" y="610" fill="#F5E4BE" font-size="44" font-family="Georgia, serif">CivFolio</text>
+</svg>

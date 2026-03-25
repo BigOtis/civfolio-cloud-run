@@ -1,0 +1,12 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#2C2A1D"/>
+  <rect x="118" y="112" width="964" height="496" rx="28" fill="#E8D6A8"/>
+  <path d="M248 214H952" stroke="#56462E" stroke-width="8" stroke-linecap="round"/>
+  <path d="M248 294H872" stroke="#8D774D" stroke-width="6" stroke-linecap="round"/>
+  <path d="M248 356H926" stroke="#8D774D" stroke-width="6" stroke-linecap="round"/>
+  <path d="M248 418H784" stroke="#8D774D" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="885" cy="244" r="72" fill="#394553"/>
+  <circle cx="885" cy="244" r="30" fill="#D5C489"/>
+  <rect x="164" y="556" width="874" height="72" rx="18" fill="#2C2A1D" fill-opacity="0.82"/>
+  <text x="206" y="602" fill="#EFDDB0" font-size="40" font-family="Georgia, serif">Signal Almanac</text>
+</svg>

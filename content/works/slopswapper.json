@@ -1,0 +1,85 @@
+{
+  "slug": "slopswapper",
+  "title": "SlopSwapper",
+  "discipline": "code",
+  "summary": "A satirical AI-age landing page that turns content laundering into a polished product joke.",
+  "description": [
+    "SlopSwapper is a sharp public-facing satire project: a fake AI content laundering platform presented with the confidence and polish of a real startup landing page.",
+    "It works because the implementation is serious even though the premise is absurd. That mix of taste, front-end execution, and commentary makes it a strong late-era city in Phil's public world."
+  ],
+  "importance": 71,
+  "status": "active",
+  "era": "Information",
+  "startYear": 2026,
+  "tags": ["typescript", "react", "satire", "ai", "vite"],
+  "map": {
+    "x": 930,
+    "y": 238,
+    "terrain": "coast",
+    "region": "Eastern Satrapy",
+    "bannerTone": "#f0ba7a"
+  },
+  "links": [
+    { "label": "Repository", "url": "https://github.com/BigOtis/SlopSwapper", "kind": "repo" }
+  ],
+  "media": [
+    {
+      "kind": "image",
+      "src": "/assets/works/slopswapper-shot.png",
+      "alt": "A preview image for the SlopSwapper GitHub repository.",
+      "caption": "A knowingly polished fake product for the age of AI slop."
+    }
+  ],
+  "greatWorks": [
+    {
+      "title": "Authenticity Exchange",
+      "summary": "A fake startup surface that turns AI-era anxieties about authorship into product satire.",
+      "xOffset": 86,
+      "yOffset": -54,
+      "unlockYear": 2026
+    }
+  ],
+  "relationships": [
+    { "target": "robot-future", "type": "integration", "label": "Public brand and commentary ecosystem" },
+    { "target": "popcurrent", "type": "inspiration", "label": "AI product framing and public experimentation" },
+    { "target": "otisfuse", "type": "trade", "label": "Audience and public visibility" }
+  ],
+  "highlights": [
+    "Turns AI commentary into a polished, memorable product joke.",
+    "Shows front-end craft, satire, and product framing in one small repo.",
+    "Feels like a real launch even while critiquing the surrounding ecosystem."
+  ],
+  "productionQueue": [
+    "Push the fake product world further with stronger lore and testimonials.",
+    "Expand the visual language so the satire lands even faster.",
+    "Use the project as a public proof-point for taste-driven front-end execution."
+  ],
+  "techTree": ["React 18", "TypeScript", "Vite", "Tailwind CSS", "Express", "TanStack Query"],
+  "diplomacy": ["AI skeptics", "Builders in public", "Design-minded engineers"],
+  "tradeRoutes": ["Landing page craft", "Satire", "AI commentary", "Public repos"],
+  "wonders": ["The Leading AI Content Laundering Platform"],
+  "metrics": {
+    "prestige": 6,
+    "activity": 6,
+    "stability": 7,
+    "reach": 5
+  },
+  "code": {
+    "repo": {
+      "owner": "BigOtis",
+      "name": "SlopSwapper"
+    },
+    "role": "Founder and primary engineer",
+    "stack": ["React 18", "TypeScript", "Vite", "Tailwind CSS", "Express", "TanStack Query"],
+    "features": [
+      "Satirical startup landing page",
+      "Polished product storytelling",
+      "Full-stack TypeScript app structure"
+    ],
+    "integrations": ["GitHub"],
+    "architectureNotes": [
+      "The joke only works because the product surface is executed convincingly.",
+      "Pairs commentary with a real front-end and app structure rather than a throwaway mock."
+    ]
+  }
+}

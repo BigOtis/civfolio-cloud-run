@@ -1,0 +1,79 @@
+{
+  "slug": "busters-td",
+  "title": "Buster's TD",
+  "discipline": "art",
+  "summary": "An Unreal Engine tower defense game used to explore gameplay systems, worldbuilding, and long-form game development.",
+  "description": [
+    "Buster's TD is Phil's game-development city. It represents learning and shipping in Unreal Engine, testing tower-defense mechanics, and building gameplay ideas in a form that is both technical and creative.",
+    "The project is linked publicly through its Steam page and Robot Future references, even though its development surface is not centered on a public GitHub repo."
+  ],
+  "importance": 81,
+  "status": "active",
+  "era": "Industrial",
+  "startYear": 2020,
+  "tags": ["unreal-engine", "game-dev", "tower-defense"],
+  "map": {
+    "x": 1010,
+    "y": 600,
+    "terrain": "forest",
+    "region": "Verdant Frontier",
+    "bannerTone": "#e7b56f"
+  },
+  "links": [
+    { "label": "Steam Page", "url": "https://store.steampowered.com/app/1316530/Busters_TD/", "kind": "live" }
+  ],
+  "media": [
+    {
+      "kind": "image",
+      "src": "/assets/works/busters-td-shot.png",
+      "alt": "A screenshot of the Buster's TD Steam page.",
+      "caption": "The public Steam presence for Phil's Unreal Engine tower defense project."
+    },
+    {
+      "kind": "image",
+      "src": "/assets/works/busters-td.svg",
+      "alt": "A fortified frontier city representing Buster's TD.",
+      "caption": "A frontier capital for Unreal Engine, gameplay loops, and player-facing systems."
+    }
+  ],
+  "greatWorks": [
+    {
+      "title": "Siege Engine",
+      "summary": "A long-running Unreal Engine build focused on gameplay systems, iteration, and worldbuilding.",
+      "xOffset": 90,
+      "yOffset": -58,
+      "unlockYear": 2020
+    }
+  ],
+  "relationships": [
+    { "target": "robot-future", "type": "series", "label": "Build logs and public writing" },
+    { "target": "character-chat", "type": "inspiration", "label": "Interactive system thinking" }
+  ],
+  "highlights": [
+    "Built as a hands-on Unreal Engine learning and production project.",
+    "Uses tower defense as a framework for gameplay iteration.",
+    "Connects technical implementation with worldbuilding and player experience."
+  ],
+  "productionQueue": [
+    "Keep iterating on gameplay balance and progression loops.",
+    "Expand presentation and world cohesion around the core defense systems.",
+    "Document more of the build process publicly."
+  ],
+  "techTree": ["Unreal Engine", "Gameplay scripting", "Game systems", "Iteration"],
+  "diplomacy": ["Players", "Game developers", "Indie builders"],
+  "tradeRoutes": ["Steam", "Build logs", "Design iteration"],
+  "wonders": ["Long-running Unreal Engine learning track"],
+  "metrics": {
+    "prestige": 8,
+    "activity": 7,
+    "stability": 6,
+    "reach": 6
+  },
+  "art": {
+    "medium": "Game development",
+    "tools": ["Unreal Engine", "Gameplay design", "Level iteration"],
+    "format": "Tower defense game",
+    "collection": "Buster's TD",
+    "credits": ["Design", "Implementation", "Iteration"]
+  }
+}

@@ -1,0 +1,66 @@
+[
+  {
+    "year": 2015,
+    "label": "Enterprise Foundations",
+    "description": "The first major city forms around enterprise support, infrastructure, and customer-facing engineering at IBM.",
+    "workStates": {
+      "ibm-support-innovation": { "visible": true, "cityLevel": "settlement" },
+      "otisfuse": { "visible": false },
+      "busters-td": { "visible": false },
+      "popcurrent": { "visible": false },
+      "character-chat": { "visible": false },
+      "robot-future": { "visible": false },
+      "polylogue": { "visible": false },
+      "slopswapper": { "visible": false },
+      "civfolio": { "visible": false }
+    }
+  },
+  {
+    "year": 2020,
+    "label": "Engine Experiments",
+    "description": "Game development and side-project prototyping start to appear alongside day-job systems work.",
+    "workStates": {
+      "ibm-support-innovation": { "cityLevel": "town" },
+      "otisfuse": { "visible": false },
+      "busters-td": { "visible": true, "cityLevel": "settlement" },
+      "popcurrent": { "visible": false },
+      "character-chat": { "visible": false },
+      "robot-future": { "visible": false },
+      "polylogue": { "visible": false },
+      "slopswapper": { "visible": false },
+      "civfolio": { "visible": false }
+    }
+  },
+  {
+    "year": 2023,
+    "label": "AI Frontier",
+    "description": "Public AI experiments move from prototypes into visible cities with production loops, personas, and news generation.",
+    "workStates": {
+      "ibm-support-innovation": { "cityLevel": "city" },
+      "otisfuse": { "visible": false },
+      "busters-td": { "cityLevel": "town" },
+      "popcurrent": { "visible": true, "cityLevel": "town" },
+      "character-chat": { "visible": true, "cityLevel": "town" },
+      "robot-future": { "visible": false },
+      "polylogue": { "visible": false },
+      "slopswapper": { "visible": false },
+      "civfolio": { "visible": false }
+    }
+  },
+  {
+    "year": 2026,
+    "label": "Robot Future Era",
+    "description": "The public brand, multi-agent tools, and long-running experiments connect into a mature portfolio world.",
+    "workStates": {
+      "ibm-support-innovation": { "visible": true, "cityLevel": "capital" },
+      "otisfuse": { "visible": true, "cityLevel": "town" },
+      "busters-td": { "visible": true, "cityLevel": "city" },
+      "popcurrent": { "visible": true, "cityLevel": "city" },
+      "character-chat": { "visible": true, "cityLevel": "city" },
+      "robot-future": { "visible": true, "cityLevel": "wonder" },
+      "polylogue": { "visible": true, "cityLevel": "city" },
+      "slopswapper": { "visible": true, "cityLevel": "town" },
+      "civfolio": { "visible": true, "cityLevel": "city" }
+    }
+  }
+]

@@ -1,0 +1,143 @@
+{
+  "title": "Phil Lopez",
+  "tagline": "AI systems, game dev, and future tech.",
+  "description": "Phil Lopez builds AI products, infrastructure tooling, game prototypes, and public writing around the future of technology. This portfolio maps that work as a living strategy world.",
+  "baseUrl": "https://www.robot-future.com",
+  "navigation": [
+    { "label": "World Map", "href": "/" },
+    { "label": "Archive", "href": "/archive" },
+    { "label": "About", "href": "/about" }
+  ],
+  "theme": {
+    "accent": "#d8b470",
+    "accentStrong": "#f4d38d",
+    "surface": "#23170e",
+    "surfaceAlt": "#3f2b1e",
+    "worldSea": "#17304c",
+    "worldLand": "#395c44"
+  },
+  "audio": {
+    "enabledByDefault": true,
+    "label": "Ambient music",
+    "track": "/assets/audio/native-american-flute.ogg"
+  },
+  "scene": {
+    "introEnabled": true,
+    "introSequence": [
+      "ibm-support-innovation",
+      "busters-td",
+      "popcurrent",
+      "character-chat",
+      "robot-future",
+      "civfolio",
+      "polylogue",
+      "otisfuse"
+    ],
+    "toolUnits": [
+      {
+        "id": "gstack-caravan",
+        "label": "gstack",
+        "type": "trader",
+        "color": "#f4d38d",
+        "route": ["ibm-support-innovation", "robot-future", "polylogue"],
+        "speed": 0.52
+      },
+      {
+        "id": "codex-army",
+        "label": "codex",
+        "type": "army",
+        "color": "#9ad5f6",
+        "route": ["character-chat", "popcurrent", "polylogue"],
+        "speed": 0.6
+      },
+      {
+        "id": "vscode-supply",
+        "label": "VS Code",
+        "type": "builder",
+        "color": "#80cadc",
+        "route": ["ibm-support-innovation", "robot-future", "busters-td"],
+        "speed": 0.56
+      },
+      {
+        "id": "slack-envoys",
+        "label": "Slack",
+        "type": "trader",
+        "color": "#d59750",
+        "route": ["ibm-support-innovation", "character-chat", "robot-future"],
+        "speed": 0.62
+      },
+      {
+        "id": "ibm-bob-patrol",
+        "label": "IBM Bob",
+        "type": "scholar",
+        "color": "#dea85d",
+        "route": ["ibm-support-innovation", "popcurrent", "robot-future"],
+        "speed": 0.48
+      },
+      {
+        "id": "openai-caravan",
+        "label": "OpenAI",
+        "type": "scholar",
+        "color": "#95dab7",
+        "route": ["character-chat", "popcurrent", "robot-future", "polylogue"],
+        "speed": 0.66
+      },
+      {
+        "id": "robot-courier",
+        "label": "Robot Courier",
+        "type": "robot",
+        "color": "#c9d5e9",
+        "route": ["robot-future", "popcurrent", "character-chat", "otisfuse"],
+        "speed": 0.58
+      },
+      {
+        "id": "agent-scout",
+        "label": "Agent Scout",
+        "type": "scout",
+        "color": "#f0c57d",
+        "route": ["polylogue", "robot-future", "ibm-support-innovation"],
+        "speed": 0.72
+      },
+      {
+        "id": "oracle-sage",
+        "label": "Oracle Sage",
+        "type": "sage",
+        "color": "#c6a5ef",
+        "route": ["polylogue", "popcurrent", "robot-future"],
+        "speed": 0.5
+      },
+      {
+        "id": "desert-merchant",
+        "label": "Camel Trader",
+        "type": "camel-trader",
+        "color": "#d8b470",
+        "route": ["ibm-support-innovation", "robot-future", "busters-td"],
+        "speed": 0.46
+      },
+      {
+        "id": "frontier-rider",
+        "label": "Horse Courier",
+        "type": "horse",
+        "color": "#b98e62",
+        "route": ["character-chat", "robot-future", "polylogue"],
+        "speed": 0.7
+      },
+      {
+        "id": "watch-archer",
+        "label": "Archer Watch",
+        "type": "archer",
+        "color": "#e8d08b",
+        "route": ["popcurrent", "robot-future", "ibm-support-innovation"],
+        "speed": 0.54
+      }
+    ]
+  },
+  "socialLinks": [
+    { "label": "CivFolio Repo", "url": "https://github.com/BigOtis/CivFolio" },
+    { "label": "GitHub", "url": "https://github.com/BigOtis" },
+    { "label": "LinkedIn", "url": "https://www.linkedin.com/in/phil-lopez-84577b64/" },
+    { "label": "Robot Future", "url": "https://www.robot-future.com/" },
+    { "label": "YouTube", "url": "https://www.youtube.com/@otisfuse" },
+    { "label": "Email", "url": "mailto:phil.lopezdev@gmail.com" }
+  ]
+}

@@ -1,26 +1,42 @@
 {
-  "name": "civfolio-app",
+  "name": "civfolio",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:with-sync": "npm run sync:github && next build",
     "start": "next start",
-    "lint": "eslint"
+    "preview:static": "serve out -l 3000",
+    "lint": "eslint .",
+    "sync:github": "tsx scripts/sync-github.ts",
+    "validate:content": "tsx scripts/validate-content.ts",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
     "next": "16.2.1",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "serve": "^14.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.21.0",
+    "typescript": "^5",
+    "vitest": "^4.1.1"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

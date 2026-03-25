@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    
+    <!-- Default SEO Meta Tags -->
+    <meta name="keywords" content="trending news, viral content, breaking news, current events, reddit stories, social media trends" />
+    <meta name="author" content="PopCurrent" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    
+    <!-- Open Graph Meta Tags (Facebook, LinkedIn) -->
+    <!-- Removed default OG tags; dynamic tags are provided at runtime or via /preview -->
+    
+    <!-- Twitter Card Meta Tags -->
+    <!-- Removed default Twitter tags -->
+    
+    <!-- App/Mobile Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="PopCurrent" />
+    <meta name="theme-color" content="#e32c26" />
+    <meta name="msapplication-TileColor" content="#e32c26" />
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://popcurrent.otisfuse.com" />
+    
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://images.unsplash.com" />
+    <link rel="dns-prefetch" href="https://storage.googleapis.com" />
+    
+    <!-- Resource hints for image optimization -->
+    <link rel="prefetch" href="https://images.unsplash.com" />
+    <meta http-equiv="Accept-CH" content="DPR, Viewport-Width, Width" />
+    
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6165577640094562"
+            crossorigin="anonymous"></script>
+    <script>
+      (adsbygoogle = window.adsbygoogle || []).push({
+        google_ad_client: "ca-pub-6165577640094562",
+        enable_page_level_ads: false
+      });
+    </script>
+    
+    <!-- Structured Data for Website -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "PopCurrent",
+      "headline": "Trending Stories & Viral Content",
+      "description": "Stay up-to-date with the latest trending stories, viral content, and breaking news from around the internet. Discover what's happening now on PopCurrent.",
+      "url": "https://popcurrent.otisfuse.com",
+      "image": {
+        "@type": "ImageObject",
+        "url": "https://popcurrent.otisfuse.com/og-image.jpg",
+        "width": 1200,
+        "height": 630
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "PopCurrent",
+        "url": "https://popcurrent.otisfuse.com",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://popcurrent.otisfuse.com/logo.png",
+          "width": 300,
+          "height": 60
+        },
+        "sameAs": [
+          "https://twitter.com/popcurrent",
+          "https://facebook.com/popcurrent",
+          "https://instagram.com/popcurrent"
+        ]
+      },
+              "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://popcurrent.otisfuse.com/search?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+    }
+    </script>
+    <script type="module" crossorigin src="/assets/index-Cs7-BRD-.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DJ8N3L92.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
+    <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
+  </body>
+</html>

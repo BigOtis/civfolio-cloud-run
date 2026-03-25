@@ -1,0 +1,99 @@
+{
+  "slug": "popcurrent",
+  "title": "PopCurrent",
+  "discipline": "code",
+  "summary": "A live viral-news and culture site built to package trending internet stories into fast-moving editorial campaigns.",
+  "description": [
+    "PopCurrent is one of Phil's clearest public AI publishing products: a trend-focused news surface designed for fast editorial packaging, social distribution, and attention-aware story framing.",
+    "The live site positions itself around trending stories, viral content, and breaking internet culture. Phil also used it as an experimental publishing engine for Reddit-native sci-fi storytelling campaigns, including The Gifts of Stillness and the later Stillness Rejected and Loranthi reveal threads.",
+    "The codebase lives in a private repository, so CivFolio treats GitHub metadata as optional enrichment and presents PopCurrent primarily through its public product surface and outcomes."
+  ],
+  "importance": 88,
+  "status": "active",
+  "era": "Atomic",
+  "startYear": 2023,
+  "tags": ["ai", "publishing", "editorial", "automation", "viral media"],
+  "map": {
+    "x": 360,
+    "y": 290,
+    "terrain": "plains",
+    "region": "West Reach",
+    "bannerTone": "#d1c383"
+  },
+  "links": [
+    { "label": "Visit Site", "url": "https://popcurrent.otisfuse.com/", "kind": "live" }
+  ],
+  "media": [
+    {
+      "kind": "image",
+      "src": "/assets/works/popcurrent-og.jpg",
+      "alt": "The PopCurrent social preview image from the live site.",
+      "caption": "PopCurrent's live brand surface for viral stories, trending culture, and editorial experiments."
+    },
+    {
+      "kind": "image",
+      "src": "/assets/works/popcurrent.svg",
+      "alt": "An observatory city representing the PopCurrent project.",
+      "caption": "A frontier editorial city tuned for trend cycles, social hooks, and high-speed publishing."
+    }
+  ],
+  "greatWorks": [
+    {
+      "title": "Viral Editorial Engine",
+      "summary": "A fast publishing loop for trend-driven stories, social framing, and internet-native editorial packaging.",
+      "xOffset": 78,
+      "yOffset": -56,
+      "unlockYear": 2023
+    },
+    {
+      "title": "The Gifts of Stillness",
+      "summary": "A Reddit-native sci-fi hoax/storytelling campaign that helped prove the product's reach and narrative packaging power.",
+      "xOffset": 94,
+      "yOffset": 18,
+      "unlockYear": 2025
+    }
+  ],
+  "relationships": [
+    { "target": "robot-future", "type": "integration", "label": "Public publishing and distribution" },
+    { "target": "character-chat", "type": "integration", "label": "Shared AI interface lessons" },
+    { "target": "polylogue", "type": "inspiration", "label": "Multi-agent interaction patterns" }
+  ],
+  "highlights": [
+    "Built a live trend-and-viral publishing surface under the PopCurrent brand.",
+    "Used the system to publish Reddit-native sci-fi hoax/storytelling campaigns, including The Gifts of Stillness and the Stillness Rejected/Loranthi reveal follow-up.",
+    "Shows Phil's product instinct for packaging AI and editorial systems into something public, legible, and culturally tuned."
+  ],
+  "productionQueue": [
+    "Refine editorial controls for narrative series and campaign-style publishing.",
+    "Improve sourcing, moderation, and curation loops for live trend coverage.",
+    "Deepen the connection between PopCurrent, Robot Future, and Phil's broader public-media stack."
+  ],
+  "techTree": ["JavaScript", "React", "Editorial automation", "Prompting", "Publishing systems"],
+  "diplomacy": ["Readers", "Reddit communities", "Trend followers", "AI experimenters"],
+  "tradeRoutes": ["Viral stories", "Trending culture", "Campaign publishing", "Social traffic"],
+  "wonders": ["Trend-aware editorial engine", "The Gifts of Stillness campaign"],
+  "metrics": {
+    "prestige": 8,
+    "activity": 8,
+    "stability": 6,
+    "reach": 8
+  },
+  "code": {
+    "repo": {
+      "owner": "BigOtis",
+      "name": "TrendScoop"
+    },
+    "role": "Founder and primary engineer",
+    "stack": ["JavaScript", "React", "Editorial automation", "Publishing architecture", "AI integration"],
+    "features": [
+      "Live trend publishing surface",
+      "Campaign-ready editorial packaging",
+      "Social-distribution-oriented story presentation"
+    ],
+    "integrations": ["Private GitHub repository", "Public web publishing"],
+    "architectureNotes": [
+      "Designed as a public-facing editorial product rather than a repo-first demo.",
+      "Balances productized publishing workflows with experimental narrative campaigns and fast content iteration."
+    ]
+  }
+}

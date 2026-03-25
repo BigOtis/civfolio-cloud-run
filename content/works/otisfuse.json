@@ -1,0 +1,73 @@
+{
+  "slug": "otisfuse",
+  "title": "OtisFuse",
+  "discipline": "video",
+  "summary": "Phil's YouTube outpost for public videos, experiments, commentary, and the broader world around his projects.",
+  "description": [
+    "OtisFuse is the media city-state attached to Phil's public brand. It matters because it turns projects into artifacts people can discover, watch, and share without already knowing his code or writing.",
+    "In the world map, it acts as a harbor city for reach, distribution, and public personality. It should make the portfolio feel like it belongs to a real internet-native builder, not just a resume."
+  ],
+  "importance": 71,
+  "status": "active",
+  "era": "Modern",
+  "startYear": 2026,
+  "tags": ["youtube", "video", "brand", "distribution"],
+  "map": {
+    "x": 1180,
+    "y": 170,
+    "terrain": "coast",
+    "region": "Signal Coast",
+    "bannerTone": "#d76d5c"
+  },
+  "links": [
+    { "label": "YouTube Channel", "url": "https://www.youtube.com/@otisfuse", "kind": "video" }
+  ],
+  "media": [
+    {
+      "kind": "image",
+      "src": "/assets/works/otisfuse-shot.png",
+      "alt": "A screenshot of the OtisFuse YouTube channel.",
+      "caption": "A public video outpost for distribution, commentary, and creator-facing brand building."
+    }
+  ],
+  "greatWorks": [
+    {
+      "title": "Signal Beacon",
+      "summary": "Public video distribution that turns project work into something shareable and memorable.",
+      "xOffset": 84,
+      "yOffset": -56,
+      "unlockYear": 2026
+    }
+  ],
+  "relationships": [
+    { "target": "robot-future", "type": "integration", "label": "Public distribution channel" },
+    { "target": "busters-td", "type": "series", "label": "Game development and showable media" }
+  ],
+  "highlights": [
+    "Adds a media layer to Phil's public brand.",
+    "Turns projects into shareable artifacts for a broader audience.",
+    "Supports the portfolio's goal of making strangers want to follow what comes next."
+  ],
+  "productionQueue": [
+    "Publish more project demos and commentary.",
+    "Connect videos more tightly to Robot Future posts and project pages.",
+    "Use the channel to make complex AI and engineering work easier to discover."
+  ],
+  "techTree": ["YouTube", "Video publishing", "Brand storytelling"],
+  "diplomacy": ["Viewers", "Friends", "Builders online"],
+  "tradeRoutes": ["Videos", "Project demos", "Social discovery"],
+  "wonders": ["Followable public signal"],
+  "metrics": {
+    "prestige": 7,
+    "activity": 7,
+    "stability": 6,
+    "reach": 7
+  },
+  "video": {
+    "format": "YouTube channel",
+    "tools": ["Screen capture", "Editing", "Publishing"],
+    "duration": "Ongoing",
+    "credits": ["Creator", "Editor", "Presenter"],
+    "deliverables": ["Video posts", "Project demos", "Public updates"]
+  }
+}

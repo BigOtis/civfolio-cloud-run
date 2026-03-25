@@ -1,0 +1,33 @@
+{
+  "name": "Phil Lopez",
+  "headline": "Leader of a builder civilization spanning AI systems, public experiments, and game development.",
+  "currentRole": "AI Engineer for IBM z/OS",
+  "summary": "Phil Lopez leads a small but fast-moving civilization of AI systems, support automations, public-facing experiments, and game projects. His empire started in enterprise reliability at IBM, expanded through AI product work and writing on Robot Future, and now pushes toward agentic tools that make people measurably more capable.",
+  "philosophy": [
+    "Build real systems that increase the output of the people using them.",
+    "Use AI to remove repetitive labor so human attention can move up the stack.",
+    "Treat engineering, design, writing, and worldbuilding as one connected craft."
+  ],
+  "disciplines": ["code", "art", "writing", "client"],
+  "featuredSkills": [
+    "JavaScript and Python product development",
+    "AI and OpenAI API integration",
+    "Infrastructure and support automation",
+    "React, Node.js, MongoDB, and cloud delivery",
+    "Unreal Engine prototyping"
+  ],
+  "achievements": [
+    "Forged award-winning internal tools and automation systems at IBM.",
+    "Now serves as an AI Engineer for IBM z/OS.",
+    "Graduated from RIT with a BS/MS in Computer Science.",
+    "Shipped public AI experiments, a live tech brand, a portfolio framework, and an Unreal Engine game project."
+  ],
+  "contactLinks": [
+    { "label": "Email", "url": "mailto:phil.lopezdev@gmail.com" },
+    { "label": "CivFolio Repo", "url": "https://github.com/BigOtis/CivFolio" },
+    { "label": "GitHub", "url": "https://github.com/BigOtis" },
+    { "label": "LinkedIn", "url": "https://www.linkedin.com/in/phil-lopez-84577b64/" },
+    { "label": "Robot Future", "url": "https://www.robot-future.com/" }
+  ],
+  "avatar": "/assets/leader/phil.png"
+}

@@ -1,0 +1,85 @@
+{
+  "slug": "civfolio",
+  "title": "CivFolio",
+  "discipline": "code",
+  "summary": "The strategy-map resume site and open-source portfolio framework that turns project history into a living world.",
+  "description": [
+    "CivFolio is the meta-city in the empire: the portfolio framework itself. It takes Phil's own body of work and renders it as a 4X-inspired world map, with projects as cities, Great Works as landmarks, and growth over time as a campaign.",
+    "It is intentionally both a personal artifact and a reusable open-source starter. That makes it part demo, part framework, and part statement about how software portfolios can feel authored instead of interchangeable."
+  ],
+  "importance": 88,
+  "status": "active",
+  "era": "Information",
+  "startYear": 2026,
+  "tags": ["nextjs", "portfolio", "framework", "react", "open-source"],
+  "map": {
+    "x": 1160,
+    "y": 470,
+    "terrain": "plains",
+    "region": "Cartographer's Reach",
+    "bannerTone": "#e1c37a"
+  },
+  "links": [],
+  "media": [
+    {
+      "kind": "image",
+      "src": "/assets/works/civfolio-shot.png",
+      "alt": "The CivFolio world map with the CivFolio city management view open.",
+      "caption": "The live CivFolio map acting as its own city-management screen."
+    },
+    {
+      "kind": "image",
+      "src": "/assets/works/civfolio.svg",
+      "alt": "A stylized world-map city representing the CivFolio framework.",
+      "caption": "A self-referential city where the portfolio becomes the framework."
+    }
+  ],
+  "greatWorks": [
+    {
+      "title": "Empire Cartographer",
+      "summary": "A portfolio framework that turns otherwise static career history into an explorable living world.",
+      "xOffset": 84,
+      "yOffset": -60,
+      "unlockYear": 2026
+    }
+  ],
+  "relationships": [
+    { "target": "robot-future", "type": "integration", "label": "Public brand and portfolio layer" },
+    { "target": "ibm-support-innovation", "type": "inspiration", "label": "Career capital represented as game world" },
+    { "target": "slopswapper", "type": "inspiration", "label": "Taste-driven front-end experimentation" }
+  ],
+  "highlights": [
+    "Transforms a resume and project archive into a strategy-map experience.",
+    "Ships as a self-hosted, file-backed open-source framework instead of a closed personal site.",
+    "Combines interaction design, data modeling, and visual worldbuilding in one product."
+  ],
+  "productionQueue": [
+    "Expand the starter so other creators can drop in their own data and projects.",
+    "Deepen the world simulation with richer units, landmarks, and era transitions.",
+    "Polish the map UX until it feels as smooth as a small strategy game."
+  ],
+  "techTree": ["Next.js", "React", "Static export", "Schema validation", "Strategy-map UI", "Agentic AI"],
+  "diplomacy": ["Open-source users", "Creative technologists", "Builders in public"],
+  "tradeRoutes": ["Portfolio content", "Map UX", "Open-source framework"],
+  "wonders": ["Portfolio as living world", "4X-inspired navigation", "File-backed portfolio starter"],
+  "metrics": {
+    "prestige": 9,
+    "activity": 9,
+    "stability": 7,
+    "reach": 6
+  },
+  "code": {
+    "role": "Designer, founder, and primary engineer",
+    "stack": ["Next.js", "React", "TypeScript", "Tailwind CSS", "Static generation"],
+    "features": [
+      "Interactive strategy-map navigation",
+      "Timeline-driven city growth",
+      "Open-source single-tenant portfolio framework"
+    ],
+    "integrations": ["GitHub content sync"],
+    "architectureNotes": [
+      "Designed as a self-hosted portfolio starter with no database dependency.",
+      "Uses a typed content layer so the personal demo can also act as a reusable framework."
+    ]
+  }
+}

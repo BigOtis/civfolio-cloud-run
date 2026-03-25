@@ -1,0 +1,79 @@
+{
+  "slug": "robot-future",
+  "title": "Robot Future",
+  "discipline": "writing",
+  "summary": "Phil's public home for AI writing, tech projects, future-of-technology essays, and the systems behind that work.",
+  "description": [
+    "Robot Future is the flagship capital of the portfolio. It combines public writing, technical experiments, and a full-stack publishing platform around AI, Unreal Engine development, and future tech.",
+    "The site also acts as Phil's public brand. It connects his game work, AI experiments, and philosophy about using advanced tools to free people for bigger questions."
+  ],
+  "importance": 96,
+  "status": "active",
+  "era": "Modern",
+  "startYear": 2025,
+  "tags": ["robot-future", "blog", "ai", "full-stack"],
+  "map": {
+    "x": 720,
+    "y": 330,
+    "terrain": "highlands",
+    "region": "Central Crown",
+    "bannerTone": "#f1c981"
+  },
+  "links": [
+    { "label": "Visit Site", "url": "https://www.robot-future.com/", "kind": "live" }
+  ],
+  "media": [
+    {
+      "kind": "image",
+      "src": "/assets/works/robot-future-shot.png",
+      "alt": "A screenshot of the Robot Future website.",
+      "caption": "The live public home tying together writing, projects, and future-tech worldbuilding."
+    },
+    {
+      "kind": "image",
+      "src": "/assets/works/robot-future.svg",
+      "alt": "A glowing central capital representing the Robot Future platform.",
+      "caption": "A public-facing capital tying writing, experiments, and future-tech worldbuilding together."
+    }
+  ],
+  "greatWorks": [
+    {
+      "title": "Future-Tech Beacon",
+      "summary": "A public technical brand that makes Phil's work legible and memorable to strangers.",
+      "xOffset": 92,
+      "yOffset": -66,
+      "unlockYear": 2025
+    }
+  ],
+  "relationships": [
+    { "target": "popcurrent", "type": "integration", "label": "AI publishing ecosystem" },
+    { "target": "character-chat", "type": "integration", "label": "Public AI product experiments" },
+    { "target": "busters-td", "type": "series", "label": "Game dev writing and build logs" },
+    { "target": "polylogue", "type": "inspiration", "label": "Future-facing interface work" }
+  ],
+  "highlights": [
+    "Built a public technical brand around AI, game development, and future tech.",
+    "Runs as a full-stack React, TypeScript, and Express platform with cloud services.",
+    "Combines public writing, project showcase, and ongoing experimentation in one hub."
+  ],
+  "productionQueue": [
+    "Publish more project breakdowns and future-tech essays.",
+    "Expand public writing around AGI, robotics, and creative tooling.",
+    "Keep tightening the integration between projects and longform posts."
+  ],
+  "techTree": ["React", "TypeScript", "Express", "MongoDB", "PostgreSQL", "Google Cloud"],
+  "diplomacy": ["Readers", "Builders in public", "AI enthusiasts", "Game developers"],
+  "tradeRoutes": ["Articles", "Project pages", "Public experiments", "Social distribution"],
+  "wonders": ["Public technical brand", "Future-tech framing", "Full-stack publishing system"],
+  "metrics": {
+    "prestige": 9,
+    "activity": 8,
+    "stability": 8,
+    "reach": 8
+  },
+  "writing": {
+    "format": "Technical blog and project hub",
+    "publications": ["Robot Future"],
+    "topics": ["AI", "Future technology", "Unreal Engine", "Projects in public"]
+  }
+}

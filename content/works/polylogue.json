@@ -1,0 +1,90 @@
+{
+  "slug": "polylogue",
+  "title": "Polylogue",
+  "discipline": "code",
+  "summary": "A sleek web-based multi-agent discussion interface built around the idea of many minds in one conversation.",
+  "description": [
+    "Polylogue is one of Phil's most recent public repos and a strong example of interface-focused AI experimentation.",
+    "The concept centers on structured multi-agent conversation, pushing beyond single-chat patterns toward richer collaborative reasoning surfaces."
+  ],
+  "importance": 73,
+  "status": "active",
+  "era": "Information",
+  "startYear": 2026,
+  "tags": ["python", "multi-agent", "ui", "ai"],
+  "map": {
+    "x": 610,
+    "y": 150,
+    "terrain": "highlands",
+    "region": "North Observatory",
+    "bannerTone": "#87c5dd"
+  },
+  "links": [
+    { "label": "Repository", "url": "https://github.com/BigOtis/Polylogue", "kind": "repo" }
+  ],
+  "media": [
+    {
+      "kind": "image",
+      "src": "/assets/works/polylogue-shot.png",
+      "alt": "A reconstructed screenshot based on the Polylogue interface design.",
+      "caption": "A dark, multi-agent discussion interface rendered from the project's public template."
+    },
+    {
+      "kind": "image",
+      "src": "/assets/works/polylogue.svg",
+      "alt": "A highland observatory city representing Polylogue.",
+      "caption": "A science city for multi-agent interfaces and collaborative reasoning."
+    }
+  ],
+  "greatWorks": [
+    {
+      "title": "A Thousand Minds",
+      "summary": "A multi-agent discussion surface that treats collaborative reasoning as the product.",
+      "xOffset": 90,
+      "yOffset": -62,
+      "unlockYear": 2026
+    }
+  ],
+  "relationships": [
+    { "target": "popcurrent", "type": "inspiration", "label": "AI interface progression" },
+    { "target": "robot-future", "type": "integration", "label": "Flagship public ecosystem" }
+  ],
+  "highlights": [
+    "Explores multi-agent UX instead of standard single-thread chat.",
+    "Positions AI collaboration as a product and interface problem.",
+    "Recent repo activity makes it a visible late-era city on the map."
+  ],
+  "productionQueue": [
+    "Expand orchestration controls for participants and roles.",
+    "Polish the interaction model for longer collaborative sessions.",
+    "Document design lessons learned from multi-agent discussion UX."
+  ],
+  "techTree": ["Python", "AI orchestration", "Interface design"],
+  "diplomacy": ["AI builders", "Researchers", "Product experimenters"],
+  "tradeRoutes": ["Agent roles", "Shared context", "Collaborative reasoning"],
+  "wonders": ["Many minds, one conversation"],
+  "metrics": {
+    "prestige": 7,
+    "activity": 8,
+    "stability": 6,
+    "reach": 5
+  },
+  "code": {
+    "repo": {
+      "owner": "BigOtis",
+      "name": "Polylogue"
+    },
+    "role": "Founder and primary engineer",
+    "stack": ["Python", "Web UI", "Multi-agent systems"],
+    "features": [
+      "Structured multi-agent interface",
+      "Conversation orchestration",
+      "Public product concept"
+    ],
+    "integrations": ["GitHub"],
+    "architectureNotes": [
+      "Builds around multi-agent conversation as a first-class interaction model.",
+      "Treats clarity of discussion flow as part of the core product value."
+    ]
+  }
+}

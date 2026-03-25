@@ -1,0 +1,11 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#102337"/>
+  <path d="M0 472C162 356 302 350 443 391C584 432 706 525 859 506C1012 487 1112 386 1200 298V720H0V472Z" fill="#173D5E"/>
+  <path d="M74 522L270 348L462 428L646 216L842 340L1028 214L1128 286V720H74V522Z" fill="#35684A"/>
+  <circle cx="646" cy="216" r="64" fill="#F4D38D"/>
+  <circle cx="646" cy="216" r="108" stroke="#F4D38D" stroke-opacity="0.32" stroke-width="12"/>
+  <path d="M270 348L462 428L646 216L842 340L1028 214" stroke="#F1C981" stroke-width="11" stroke-linecap="round"/>
+  <rect x="558" y="148" width="176" height="176" rx="22" fill="#F6E7BF"/>
+  <rect x="166" y="562" width="870" height="78" rx="16" fill="#24170F" fill-opacity="0.76"/>
+  <text x="214" y="612" fill="#F5E4BE" font-size="42" font-family="Georgia, serif">Robot Future</text>
+</svg>

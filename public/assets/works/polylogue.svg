@@ -1,0 +1,11 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#11273A"/>
+  <path d="M0 456C140 388 255 372 394 404C533 436 678 548 830 528C982 508 1080 424 1200 326V720H0V456Z" fill="#205A76"/>
+  <path d="M178 492L320 268L506 346L660 168L836 300L1014 210L1114 302V720H178V492Z" fill="#3D5D6A"/>
+  <circle cx="660" cy="168" r="60" fill="#87C5DD"/>
+  <circle cx="660" cy="168" r="108" stroke="#87C5DD" stroke-opacity="0.28" stroke-width="12"/>
+  <path d="M420 388C474 312 546 274 654 278C758 282 846 338 920 404" stroke="#D7EEF4" stroke-width="10" stroke-linecap="round"/>
+  <path d="M450 248C512 214 598 214 670 246" stroke="#D7EEF4" stroke-width="10" stroke-linecap="round"/>
+  <rect x="168" y="556" width="864" height="74" rx="18" fill="#14212D" fill-opacity="0.8"/>
+  <text x="206" y="603" fill="#EFF5F7" font-size="40" font-family="Georgia, serif">Polylogue</text>
+</svg>

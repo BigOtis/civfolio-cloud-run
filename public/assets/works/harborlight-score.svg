@@ -1,0 +1,12 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#102739"/>
+  <path d="M0 410C138 430 231 520 378 514C525 508 636 382 781 380C926 378 1032 449 1200 529V720H0V410Z" fill="#1E5470"/>
+  <path d="M0 520C145 501 286 576 432 588C578 600 678 548 810 529C942 510 1059 537 1200 616V720H0V520Z" fill="#4BA0B5"/>
+  <path d="M248 204V458" stroke="#E4C281" stroke-width="12" stroke-linecap="round"/>
+  <path d="M248 204L330 248" stroke="#E4C281" stroke-width="12" stroke-linecap="round"/>
+  <path d="M248 280L356 336" stroke="#E4C281" stroke-width="12" stroke-linecap="round"/>
+  <path d="M248 356L314 392" stroke="#E4C281" stroke-width="12" stroke-linecap="round"/>
+  <path d="M248 430L340 472" stroke="#E4C281" stroke-width="12" stroke-linecap="round"/>
+  <rect x="162" y="556" width="878" height="76" rx="18" fill="#13202B" fill-opacity="0.8"/>
+  <text x="204" y="603" fill="#EFF5F7" font-size="40" font-family="Georgia, serif">Harborlight Score</text>
+</svg>

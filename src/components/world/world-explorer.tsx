@@ -1,0 +1,2473 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { type ButtonHTMLAttributes, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+import { WorkDetail } from "@/components/work/work-detail";
+import { CityAdornment, CityIllustration, GreatWorkIllustration } from "@/components/world/city-illustration";
+import type { WorldRenderModel } from "@/lib/content/derive";
+import type { GithubCache, LeaderProfile, SiteConfig, Work } from "@/lib/content/schema";
+import { cn, formatDisciplineLabel, formatDisplayLabel } from "@/lib/utils";
+
+const terrainFill = {
+  coast: "#163755",
+  plains: "#6a7c47",
+  forest: "#35543a",
+  hills: "#72563d",
+  highlands: "#5a4d65",
+} as const;
+
+const terrainPattern = {
+  coast: "url(#terrain-coast)",
+  plains: "url(#terrain-plains)",
+  forest: "url(#terrain-forest)",
+  hills: "url(#terrain-hills)",
+  highlands: "url(#terrain-highlands)",
+} as const;
+
+const disciplineTone = {
+  code: "#f2c36f",
+  art: "#e6aa72",
+  music: "#80cadc",
+  video: "#95dab7",
+  writing: "#d2c77e",
+  client: "#d59750",
+} as const;
+
+const improvementOffsets = [
+  { x: -74, y: -34 },
+  { x: 82, y: -18 },
+  { x: -62, y: 42 },
+  { x: 70, y: 48 },
+] as const;
+
+const cityBannerLayout: Record<
+  string,
+  { dx: number; dy: number; anchor: "start" | "middle" | "end" }
+> = {
+  popcurrent: { dx: 0, dy: -72, anchor: "middle" },
+  "polylogue": { dx: 0, dy: -78, anchor: "middle" },
+  "robot-future": { dx: 58, dy: -10, anchor: "start" },
+  "ibm-support-innovation": { dx: 48, dy: -4, anchor: "start" },
+  "busters-td": { dx: 44, dy: -6, anchor: "start" },
+  "character-chat": { dx: -44, dy: -6, anchor: "end" },
+  otisfuse: { dx: 34, dy: -34, anchor: "start" },
+};
+
+const cityAdornmentLayout: Record<string, { dx: number; dy: number; scale?: number }> = {
+  "robot-future": { dx: 62, dy: -22, scale: 1.04 },
+  "ibm-support-innovation": { dx: -68, dy: -10, scale: 1.02 },
+  "busters-td": { dx: -56, dy: 18, scale: 0.98 },
+  polylogue: { dx: 72, dy: -18, scale: 0.96 },
+  "character-chat": { dx: 66, dy: -16, scale: 0.96 },
+  otisfuse: { dx: 60, dy: -8, scale: 0.94 },
+  civfolio: { dx: 60, dy: -14, scale: 0.94 },
+  slopswapper: { dx: 60, dy: -10, scale: 0.94 },
+  popcurrent: { dx: 70, dy: -12, scale: 0.96 },
+};
+
+type CameraState = {
+  zoom: number;
+  x: number;
+  y: number;
+};
+
+const initialCamera: CameraState = {
+  zoom: 0.82,
+  x: 80,
+  y: 30,
+};
+
+declare global {
+  interface Window {
+    __CIVFOLIO_INTRO_STEP_MS?: number;
+    __CIVFOLIO_INTRO_FINAL_MS?: number;
+  }
+}
+
+function useWorldAudio(audioConfig: SiteConfig["audio"]) {
+  const [status, setStatus] = useState<"off" | "on" | "blocked">(
+    audioConfig.enabledByDefault ? "on" : "off",
+  );
+  const musicRef = useRef<HTMLAudioElement | null>(null);
+  const contextRef = useRef<AudioContext | null>(null);
+  const ambientVolume = 0.09;
+
+  const createAmbientAudio = useCallback(() => {
+    const audio = new Audio(audioConfig.track);
+    audio.loop = true;
+    audio.volume = ambientVolume;
+    audio.preload = "metadata";
+    return audio;
+  }, [ambientVolume, audioConfig.track]);
+
+  const ensureAudioContext = useCallback(async () => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const context = contextRef.current ?? new window.AudioContext();
+    contextRef.current = context;
+
+    if (context.state === "suspended") {
+      await context.resume();
+    }
+
+    return context;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      musicRef.current?.pause();
+      musicRef.current = null;
+      void contextRef.current?.close();
+      contextRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!audioConfig.enabledByDefault || !audioConfig.track) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function startPlayback() {
+      if (!musicRef.current) {
+        musicRef.current = createAmbientAudio();
+      }
+
+      try {
+        await musicRef.current.play();
+        if (!cancelled) {
+          setStatus("on");
+        }
+      } catch {
+        if (!cancelled) {
+          setStatus("blocked");
+        }
+      }
+    }
+
+    void startPlayback();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [audioConfig.enabledByDefault, audioConfig.track, createAmbientAudio]);
+
+  useEffect(() => {
+    if (!audioConfig.enabledByDefault || !audioConfig.track || status !== "blocked") {
+      return;
+    }
+
+    async function retryOnInteraction() {
+      if (!musicRef.current) {
+        musicRef.current = createAmbientAudio();
+      }
+
+      try {
+        await musicRef.current.play();
+        setStatus("on");
+      } catch {
+        // Keep blocked until the next interaction.
+      }
+    }
+
+    const handler = () => {
+      void retryOnInteraction();
+    };
+
+    window.addEventListener("pointerdown", handler, { once: true });
+    window.addEventListener("keydown", handler, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", handler);
+      window.removeEventListener("keydown", handler);
+    };
+  }, [audioConfig.enabledByDefault, audioConfig.track, createAmbientAudio, status]);
+
+  const toggleMusic = useCallback(async () => {
+    if (!audioConfig.track) {
+      setStatus("blocked");
+      return;
+    }
+
+    if (!musicRef.current) {
+      musicRef.current = createAmbientAudio();
+    }
+
+    if (status === "on" && musicRef.current) {
+      musicRef.current.pause();
+      setStatus("off");
+      return;
+    }
+
+    try {
+      await musicRef.current?.play();
+      setStatus("on");
+    } catch {
+      setStatus("blocked");
+    }
+  }, [audioConfig.track, createAmbientAudio, status]);
+
+  const playUiClick = useCallback((kind: "button" | "toggle" | "city" | "close" | "troop" = "button") => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const context = await ensureAudioContext();
+        if (!context) {
+          return;
+        }
+        const now = context.currentTime;
+
+        const master = context.createGain();
+        master.gain.setValueAtTime(kind === "city" ? 0.07 : kind === "troop" ? 0.05 : 0.045, now);
+        master.connect(context.destination);
+
+        const body = context.createOscillator();
+        const bodyGain = context.createGain();
+        body.type = kind === "toggle" ? "sine" : kind === "troop" ? "square" : "triangle";
+        body.frequency.setValueAtTime(
+          kind === "city" ? 196 : kind === "troop" ? 330 : kind === "close" ? 520 : kind === "toggle" ? 720 : 620,
+          now,
+        );
+        body.frequency.exponentialRampToValueAtTime(
+          kind === "city" ? 148 : kind === "troop" ? 246 : kind === "close" ? 360 : kind === "toggle" ? 560 : 430,
+          now + (kind === "city" ? 0.22 : kind === "troop" ? 0.18 : 0.14),
+        );
+        bodyGain.gain.setValueAtTime(0.0001, now);
+        bodyGain.gain.exponentialRampToValueAtTime(kind === "city" ? 0.55 : kind === "troop" ? 0.32 : 0.36, now + 0.02);
+        bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === "city" ? 0.24 : kind === "troop" ? 0.19 : 0.15));
+        body.connect(bodyGain);
+        bodyGain.connect(master);
+        body.start(now);
+        body.stop(now + (kind === "city" ? 0.26 : kind === "troop" ? 0.2 : 0.17));
+
+        if (kind === "city") {
+          const horn = context.createOscillator();
+          const hornGain = context.createGain();
+          horn.type = "sawtooth";
+          horn.frequency.setValueAtTime(294, now + 0.03);
+          horn.frequency.exponentialRampToValueAtTime(220, now + 0.22);
+          hornGain.gain.setValueAtTime(0.0001, now + 0.02);
+          hornGain.gain.exponentialRampToValueAtTime(0.18, now + 0.06);
+          hornGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+          horn.connect(hornGain);
+          hornGain.connect(master);
+          horn.start(now + 0.02);
+          horn.stop(now + 0.26);
+
+          const buffer = context.createBuffer(1, Math.floor(context.sampleRate * 0.12), context.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let index = 0; index < data.length; index += 1) {
+            data[index] = (Math.random() * 2 - 1) * (1 - index / data.length);
+          }
+          const rattle = context.createBufferSource();
+          const filter = context.createBiquadFilter();
+          const rattleGain = context.createGain();
+          rattle.buffer = buffer;
+          filter.type = "bandpass";
+          filter.frequency.setValueAtTime(820, now);
+          filter.Q.value = 1.1;
+          rattleGain.gain.setValueAtTime(0.0001, now);
+          rattleGain.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
+          rattleGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
+          rattle.connect(filter);
+          filter.connect(rattleGain);
+          rattleGain.connect(master);
+          rattle.start(now);
+          rattle.stop(now + 0.12);
+        }
+
+        if (kind === "troop") {
+          const snare = context.createBufferSource();
+          const buffer = context.createBuffer(1, Math.floor(context.sampleRate * 0.09), context.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let index = 0; index < data.length; index += 1) {
+            data[index] = (Math.random() * 2 - 1) * (1 - index / data.length);
+          }
+          const filter = context.createBiquadFilter();
+          const snareGain = context.createGain();
+          snare.buffer = buffer;
+          filter.type = "highpass";
+          filter.frequency.setValueAtTime(1200, now);
+          snareGain.gain.setValueAtTime(0.0001, now);
+          snareGain.gain.exponentialRampToValueAtTime(0.09, now + 0.01);
+          snareGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+          snare.connect(filter);
+          filter.connect(snareGain);
+          snareGain.connect(master);
+          snare.start(now + 0.01);
+          snare.stop(now + 0.09);
+        }
+      } catch {
+        // Ignore audio errors on unsupported browsers.
+      }
+    })();
+  }, [ensureAudioContext]);
+
+  const playIntroCue = useCallback((kind: "founding" | "complete" = "founding") => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const context = await ensureAudioContext();
+        if (!context) {
+          return;
+        }
+
+        const master = context.createGain();
+        const now = context.currentTime;
+        master.gain.setValueAtTime(kind === "complete" ? 0.055 : 0.042, now);
+        master.connect(context.destination);
+
+        const body = context.createOscillator();
+        const bodyGain = context.createGain();
+        body.type = "triangle";
+        body.frequency.setValueAtTime(kind === "complete" ? 220 : 164, now);
+        body.frequency.exponentialRampToValueAtTime(kind === "complete" ? 330 : 220, now + 0.42);
+        bodyGain.gain.setValueAtTime(0.0001, now);
+        bodyGain.gain.exponentialRampToValueAtTime(0.48, now + 0.03);
+        bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+        body.connect(bodyGain);
+        bodyGain.connect(master);
+        body.start(now);
+        body.stop(now + 0.58);
+
+        const chime = context.createOscillator();
+        const chimeGain = context.createGain();
+        chime.type = "sine";
+        chime.frequency.setValueAtTime(kind === "complete" ? 587 : 440, now + 0.08);
+        chime.frequency.exponentialRampToValueAtTime(kind === "complete" ? 784 : 659, now + 0.38);
+        chimeGain.gain.setValueAtTime(0.0001, now + 0.06);
+        chimeGain.gain.exponentialRampToValueAtTime(0.24, now + 0.12);
+        chimeGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+        chime.connect(chimeGain);
+        chimeGain.connect(master);
+        chime.start(now + 0.06);
+        chime.stop(now + 0.52);
+
+        const buffer = context.createBuffer(1, Math.floor(context.sampleRate * 0.22), context.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let index = 0; index < data.length; index += 1) {
+          data[index] = (Math.random() * 2 - 1) * (1 - index / data.length);
+        }
+
+        const noise = context.createBufferSource();
+        const noiseFilter = context.createBiquadFilter();
+        const noiseGain = context.createGain();
+        noise.buffer = buffer;
+        noiseFilter.type = "bandpass";
+        noiseFilter.frequency.setValueAtTime(kind === "complete" ? 900 : 620, now);
+        noiseFilter.Q.value = 0.9;
+        noiseGain.gain.setValueAtTime(0.0001, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.16, now + 0.02);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(master);
+        noise.start(now);
+        noise.stop(now + 0.22);
+      } catch {
+        // Ignore audio errors on unsupported browsers.
+      }
+    })();
+  }, [ensureAudioContext]);
+
+  return useMemo(
+    () => ({ status, toggleMusic, playUiClick, playIntroCue }),
+    [playIntroCue, playUiClick, status, toggleMusic],
+  );
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function isInteractiveMapTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(
+    target.closest(
+      [
+        "button",
+        "a",
+        "input",
+        "select",
+        "textarea",
+        "[role='button']",
+        "[data-map-interactive='true']",
+      ].join(", "),
+    ),
+  );
+}
+
+function OverlayButton({
+  active = false,
+  children,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  active?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      {...props}
+      className={cn(
+        "pointer-events-auto relative z-10 inline-flex min-h-10 items-center justify-center rounded-full border px-4 py-2 text-[11px] uppercase tracking-[0.24em] transition",
+        active
+          ? "border-[var(--accent)] bg-[rgba(244,211,141,0.14)] text-[var(--accent-strong)]"
+          : "border-white/12 bg-[rgba(255,255,255,0.06)] text-[var(--muted-soft)] hover:border-[var(--accent)] hover:text-[var(--accent-strong)]",
+        props.className,
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function StatChip({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-[20px] border border-white/10 bg-[rgba(12,10,9,0.62)] px-4 py-3 shadow-[0_18px_35px_rgba(0,0,0,0.22)] backdrop-blur-md">
+      <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">{label}</div>
+      <div className="mt-1 font-display text-2xl leading-none text-[var(--parchment)]">{value}</div>
+    </div>
+  );
+}
+
+function usePresence(active: boolean, duration = 220) {
+  const [present, setPresent] = useState(active);
+
+  useEffect(() => {
+    if (active) {
+      const enter = window.setTimeout(() => setPresent(true), 16);
+      return () => window.clearTimeout(enter);
+    }
+
+    const timeout = window.setTimeout(() => setPresent(false), duration);
+    return () => window.clearTimeout(timeout);
+  }, [active, duration]);
+
+  return present;
+}
+
+function useRetainedPresence<T>(value: T | null, active: boolean, duration = 220) {
+  const present = usePresence(active, duration);
+  const [retained, setRetained] = useState<T | null>(value);
+
+  useEffect(() => {
+    if (active && value) {
+      const enter = window.setTimeout(() => setRetained(value), 16);
+      return () => window.clearTimeout(enter);
+    }
+
+    if (!present) {
+      const clear = window.setTimeout(() => setRetained(null), 0);
+      return () => window.clearTimeout(clear);
+    }
+  }, [active, present, value]);
+
+  return { present, retained };
+}
+
+function ToolUnitSprite({
+  type,
+  color,
+  label,
+  active = false,
+  onWater = false,
+}: {
+  type: SiteConfig["scene"]["toolUnits"][number]["type"];
+  color: string;
+  label: string;
+  active?: boolean;
+  onWater?: boolean;
+}) {
+  return (
+    <g className={cn("unit-float", active ? "unit-focus" : null)} opacity={active ? "1" : "0.82"}>
+      <title>{label}</title>
+      {onWater ? (
+        <>
+          <ellipse cx="0" cy="12.5" rx="15" ry="4.8" fill="rgba(7,14,22,0.34)" />
+          <path d="M -15 11 C -10 14 -4 15 0 15 C 4 15 10 14 15 11" fill="rgba(129,194,226,0.18)" />
+          <path
+            d="M -12 8.5 L 0 11.5 L 12 8.5 L 8 14.5 L -8 14.5 Z"
+            fill="rgba(58,79,96,0.92)"
+            stroke="rgba(166,214,240,0.42)"
+            strokeWidth="0.9"
+          />
+          <path d="M -2 10.5 L -2 0.5" stroke="rgba(217,201,161,0.78)" strokeWidth="1" strokeLinecap="round" />
+          <path d="M -2 0.5 L 6 4.5 L -2 7.5 Z" fill="rgba(236,226,188,0.76)" />
+        </>
+      ) : null}
+      <ellipse cx="0" cy="11" rx="12" ry="4.8" fill="rgba(0,0,0,0.22)" />
+      <path
+        d="M -5 10 C -6 3 -3 -4 0 -4 C 3 -4 6 3 5 10 Z"
+        fill="rgba(20,15,11,0.84)"
+        stroke={color}
+        strokeOpacity="0.68"
+        strokeWidth="1"
+      />
+      <circle cx="0" cy="-7" r="3.8" fill="#f3d9be" stroke="rgba(54,30,18,0.4)" strokeWidth="0.6" />
+
+      {type === "trader" ? (
+        <>
+          <rect x="-9" y="-1" width="5" height="7" rx="1.5" fill={color} fillOpacity="0.82" />
+          <path d="M 6 10 L 10 2 L 14 10 Z" fill={color} fillOpacity="0.8" />
+          <circle cx="10" cy="10" r="2.1" fill="rgba(17,12,9,0.8)" />
+        </>
+      ) : null}
+
+      {type === "army" ? (
+        <>
+          <path d="M 7 -2 L 12 10" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M 9 -2 L 14 0 L 10 3 Z" fill={color} />
+          <circle cx="-9" cy="4" r="3.3" fill="rgba(24,18,14,0.88)" stroke={color} strokeWidth="1.1" />
+        </>
+      ) : null}
+
+      {type === "builder" ? (
+        <>
+          <rect x="-9" y="2" width="5" height="6" rx="1.2" fill={color} fillOpacity="0.76" />
+          <path d="M 6 0 L 11 -4" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M 10 -6 L 13 -3 L 8 -1 Z" fill={color} />
+        </>
+      ) : null}
+
+      {type === "scholar" ? (
+        <>
+          <path d="M 8 10 L 8 -1" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
+          <circle cx="8" cy="-3.5" r="1.9" fill={color} />
+          <rect x="-10" y="0" width="6" height="4.4" rx="1.1" fill={color} fillOpacity="0.72" />
+        </>
+      ) : null}
+
+      {type === "robot" ? (
+        <>
+          <rect x="-6" y="-2" width="12" height="10" rx="2.6" fill={color} fillOpacity="0.86" />
+          <rect x="-4.4" y="-12" width="8.8" height="8" rx="2.2" fill="rgba(20,15,11,0.92)" stroke={color} strokeWidth="1" />
+          <circle cx="-1.6" cy="-8" r="1.2" fill={color} />
+          <circle cx="1.6" cy="-8" r="1.2" fill={color} />
+          <path d="M -8 -1 L -12 4 M 8 -1 L 12 4 M -3 8 L -5 13 M 3 8 L 5 13" stroke={color} strokeWidth="1.3" strokeLinecap="round" />
+          <path d="M 0 -12 L 0 -16" stroke={color} strokeWidth="1.1" strokeLinecap="round" />
+          <circle cx="0" cy="-17" r="1.4" fill={color} />
+        </>
+      ) : null}
+
+      {type === "scout" ? (
+        <>
+          <path d="M -9 6 L 0 -10 L 9 6 Z" fill={color} fillOpacity="0.82" />
+          <path d="M -1 -4 L 8 -12" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
+          <circle cx="9.5" cy="-13" r="1.8" fill={color} />
+          <rect x="-2.4" y="6" width="4.8" height="6" rx="1.4" fill="rgba(20,15,11,0.78)" stroke={color} strokeWidth="0.8" />
+        </>
+      ) : null}
+
+      {type === "sage" ? (
+        <>
+          <path d="M -7 8 C -7 -2 -3 -8 0 -8 C 3 -8 7 -2 7 8 Z" fill={color} fillOpacity="0.78" />
+          <path d="M -2 -12 C -2 -15 2 -15 2 -12" stroke={color} strokeWidth="1.1" strokeLinecap="round" />
+          <circle cx="0" cy="-14" r="1.9" fill={color} />
+          <path d="M 9 8 L 9 -4" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
+          <circle cx="9" cy="-6.5" r="1.8" fill={color} />
+        </>
+      ) : null}
+
+      {type === "horse" ? (
+        <>
+          <path d="M -10 5 C -9 -2 -4 -7 3 -7 C 8 -7 11 -4 11 0 C 11 4 9 6 5 7 L -1 8 Z" fill={color} fillOpacity="0.84" />
+          <path d="M 2 -6 L 7 -12 L 10 -10 L 7 -4" stroke={color} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M -6 8 L -7 14 M -1 8 L -1 14 M 5 8 L 6 14 M 9 5 L 10 12" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+          <path d="M -10 2 L -14 0" stroke={color} strokeWidth="1.1" strokeLinecap="round" />
+        </>
+      ) : null}
+
+      {type === "archer" ? (
+        <>
+          <circle cx="0" cy="-9" r="2.1" fill={color} />
+          <path d="M 0 -6 L 0 4 M -6 -1 L 4 -3 M -1 4 L -4 12 M 1 4 L 5 12" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+          <path d="M 7 -7 C 11 -3 11 3 7 7" fill="none" stroke={color} strokeWidth="1.25" strokeLinecap="round" />
+          <path d="M 3 -4 L 10 -1" stroke={color} strokeWidth="1.1" strokeLinecap="round" />
+        </>
+      ) : null}
+
+      {type === "camel-trader" ? (
+        <>
+          <path d="M -12 6 C -11 1 -8 -2 -4 -2 C -2 -8 3 -8 4 -2 C 8 -3 12 0 12 5 C 12 8 9 10 4 10 L -4 10 C -9 10 -12 9 -12 6 Z" fill={color} fillOpacity="0.84" />
+          <circle cx="10" cy="-2.5" r="2" fill={color} />
+          <path d="M -8 10 L -9 15 M -2 10 L -2 15 M 4 10 L 5 15 M 9 9 L 10 15" stroke={color} strokeWidth="1.15" strokeLinecap="round" />
+          <rect x="-3.5" y="0.5" width="7" height="5" rx="1.2" fill="rgba(18,12,9,0.78)" stroke={color} strokeWidth="0.8" />
+        </>
+      ) : null}
+    </g>
+  );
+}
+
+function ImprovementTile({
+  kind,
+  label,
+  tone,
+}: {
+  kind: "farm" | "academy" | "workshop" | "harbor";
+  label: string;
+  tone: string;
+}) {
+  return (
+    <g>
+      <title>{label}</title>
+      <ellipse cx="0" cy="14" rx="16" ry="6" fill="rgba(7,4,3,0.24)" />
+      <rect x="-14" y="-2" width="28" height="18" rx="5" fill="rgba(18,12,9,0.66)" stroke={tone} strokeOpacity="0.45" />
+      {kind === "farm" ? (
+        <>
+          <path d="M -8 9 L -8 1 M -2 9 L -2 -1 M 4 9 L 4 1 M 10 9 L 10 -1" stroke={tone} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M -11 3 C -6 -1 3 -1 11 3" fill="none" stroke={tone} strokeOpacity="0.6" strokeWidth="1.2" />
+        </>
+      ) : null}
+      {kind === "academy" ? (
+        <>
+          <path d="M -9 8 L 0 -5 L 9 8 Z" fill={tone} fillOpacity="0.72" />
+          <rect x="-2.2" y="1" width="4.4" height="8" rx="1" fill="#f7e8c7" />
+        </>
+      ) : null}
+      {kind === "workshop" ? (
+        <>
+          <rect x="-8" y="0" width="16" height="8" rx="2" fill={tone} fillOpacity="0.68" />
+          <path d="M 2 -5 L 8 -10" stroke={tone} strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M 7 -12 L 11 -8 L 5 -6 Z" fill={tone} />
+        </>
+      ) : null}
+      {kind === "harbor" ? (
+        <>
+          <path d="M -10 9 C -4 4 4 4 10 9" fill="none" stroke={tone} strokeWidth="1.3" />
+          <path d="M -3 7 L 0 -2 L 3 7 Z" fill={tone} fillOpacity="0.78" />
+        </>
+      ) : null}
+    </g>
+  );
+}
+
+function getTravelerFlavor(label: string, type: string) {
+  const key = label.toLowerCase();
+
+  if (key.includes("gstack")) return "Arrives with a clipboard, a benchmark, and three opinions you did not ask for.";
+  if (key.includes("codex")) return "Travels fast, reviews harshly, and somehow still ships before sunset.";
+  if (key.includes("slack")) return "Moves rumors, approvals, and the occasional urgent message between capitals.";
+  if (key.includes("openai")) return "Carries prompts, prototypes, and suspiciously strong opinions about tool use.";
+  if (key.includes("ibm bob")) return "An old enterprise sage who remembers every workaround and none of the meetings.";
+  if (key.includes("robot courier")) return "Delivers polished automations with the emotional range of a premium toaster.";
+  if (key.includes("agent scout")) return "Ranges ahead of the empire looking for the next strange and useful capability.";
+  if (key.includes("oracle sage")) return "Speaks in architecture notes, product instincts, and mildly prophetic roadmaps.";
+  if (key.includes("horse")) return "Covers ground fast, carries urgency well, and refuses to attend status meetings.";
+  if (key.includes("archer")) return "Keeps bugs at range and somehow still lands the shot from two tiles out.";
+  if (key.includes("camel")) return "Crosses dry stretches of the roadmap with supplies, patience, and mild judgment.";
+  if (key.includes("vs code")) return "Brings tabs, snippets, and the quiet confidence of a tool opened all day.";
+
+  if (type === "trader") return "Keeps the empire supplied with tools, habits, and improbable productivity gains.";
+  if (type === "army") return "A disciplined unit deployed wherever bugs, complexity, or chaos start gathering.";
+  if (type === "builder") return "Raises scaffolds, systems, and entirely new districts wherever work needs structure.";
+  if (type === "scholar") return "Studies the frontier, then returns with cleaner abstractions and worse sleep.";
+  if (type === "robot") return "Executes the boring parts cheerfully so the humans can chase harder problems.";
+  if (type === "scout") return "Tests the fog of war for new territory, new tools, and new obsessions.";
+  if (type === "sage") return "Turns experience into doctrine and doctrine into suspiciously practical advice.";
+  if (type === "horse") return "A fast rider carrying momentum, instincts, and one very urgent feature request.";
+  if (type === "archer") return "A ranged specialist trained to strike cleanly before problems can close the gap.";
+  if (type === "camel-trader") return "A long-haul trader built for difficult terrain, odd integrations, and dry humor.";
+
+  return "A roaming specialist carrying skills, systems, and a little local mythology between cities.";
+}
+
+type ParkedUnitState = {
+  x: number;
+  y: number;
+  until: number;
+};
+
+function getImprovementKind(label: string) {
+  const key = label.toLowerCase();
+  if (key.includes("ai") || key.includes("agentic") || key.includes("openai")) return "academy" as const;
+  if (key.includes("react") || key.includes("next") || key.includes("express") || key.includes("typescript")) return "workshop" as const;
+  if (key.includes("youtube") || key.includes("video") || key.includes("publishing")) return "harbor" as const;
+  return "farm" as const;
+}
+
+function getRoutePoint(
+  routeCities: Array<{ x: number; y: number }>,
+  speed: number,
+  timeMs: number,
+) {
+  const segments = routeCities.slice(1).map((city, index) => {
+    const from = routeCities[index];
+    const dx = city.x - from.x;
+    const dy = city.y - from.y;
+    const length = Math.hypot(dx, dy);
+
+    return { from, to: city, dx, dy, length };
+  });
+
+  const totalLength = segments.reduce((sum, segment) => sum + segment.length, 0);
+  if (totalLength === 0) {
+    const origin = routeCities[0];
+    return { x: origin.x, y: origin.y, angle: 0 };
+  }
+
+  const distance = ((timeMs / 1000) * 26 * speed) % totalLength;
+  let traveled = 0;
+
+  for (const segment of segments) {
+    if (distance <= traveled + segment.length) {
+      const progress = (distance - traveled) / segment.length;
+      return {
+        x: segment.from.x + segment.dx * progress,
+        y: segment.from.y + segment.dy * progress,
+        angle: Math.atan2(segment.dy, segment.dx),
+      };
+    }
+    traveled += segment.length;
+  }
+
+  const fallback = segments[segments.length - 1];
+  return { x: fallback.to.x, y: fallback.to.y, angle: Math.atan2(fallback.dy, fallback.dx) };
+}
+
+export function WorldExplorer({
+  site,
+  leader,
+  world,
+  works,
+  github,
+}: {
+  site: SiteConfig;
+  leader: LeaderProfile;
+  world: WorldRenderModel;
+  works: Work[];
+  github: GithubCache;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+  const unitDragRef = useRef<{ id: string; pointerId: number; offsetX: number; offsetY: number } | null>(null);
+  const dragDistanceRef = useRef(0);
+  const suppressCityClickRef = useRef(false);
+  const cameraTargetRef = useRef<CameraState>(initialCamera);
+  const introCancelledRef = useRef(false);
+  const introTimeoutRef = useRef<number | null>(null);
+  const introCueKeyRef = useRef<string | null>(null);
+  const unitHoverReleaseRef = useRef<number | null>(null);
+  const selectionSourceRef = useRef<"map" | "route">("route");
+  const frozenUnitTimeRef = useRef(0);
+  const [parkedUnits, setParkedUnits] = useState<Record<string, ParkedUnitState>>({});
+  const [draggedUnit, setDraggedUnit] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [selectedYear, setSelectedYear] = useState(world.years[world.years.length - 1]);
+  const [filter, setFilter] = useState<Work["discipline"] | "all">("all");
+  const [camera, setCamera] = useState<CameraState>(initialCamera);
+  const [sceneClock, setSceneClock] = useState(0);
+  const [containerSize, setContainerSize] = useState({ width: 1200, height: 840 });
+  const [hoveredCity, setHoveredCity] = useState<{
+    slug: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [hoveredGreatWork, setHoveredGreatWork] = useState<string | null>(null);
+  const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
+  const [hoveredUnitCard, setHoveredUnitCard] = useState<{
+    id: string;
+    label: string;
+    type: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [introActive, setIntroActive] = useState(site.scene.introEnabled);
+  const [introIndex, setIntroIndex] = useState(0);
+  const [showLeader, setShowLeader] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const audio = useWorldAudio(site.audio);
+  const isTablet = containerSize.width < 1100;
+  const isMobile = containerSize.width < 760;
+  const isShort = containerSize.height < 760;
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) {
+        return;
+      }
+
+      setContainerSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      });
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    let frame = 0;
+
+    const tick = () => {
+      frame = window.requestAnimationFrame(tick);
+      setCamera((current) => {
+        const target = cameraTargetRef.current;
+        const ease = isDragging ? 0.34 : 0.16;
+        const next = {
+          zoom: current.zoom + (target.zoom - current.zoom) * ease,
+          x: current.x + (target.x - current.x) * ease,
+          y: current.y + (target.y - current.y) * ease,
+        };
+
+        if (
+          Math.abs(next.zoom - target.zoom) < 0.001 &&
+          Math.abs(next.x - target.x) < 0.5 &&
+          Math.abs(next.y - target.y) < 0.5
+        ) {
+          return target;
+        }
+
+        return next;
+      });
+    };
+
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [isDragging]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      const now = performance.now();
+
+      if (document.visibilityState === "visible") {
+        setSceneClock(now);
+      }
+
+      setParkedUnits((current) => {
+        let changed = false;
+        const next = Object.fromEntries(
+          Object.entries(current).filter(([, parked]) => {
+            const keep = parked.until > now;
+            if (!keep) {
+              changed = true;
+            }
+            return keep;
+          }),
+        );
+        return changed ? next : current;
+      });
+    }, 120);
+
+    return () => {
+      window.clearInterval(interval);
+      if (unitHoverReleaseRef.current) {
+        window.clearTimeout(unitHoverReleaseRef.current);
+      }
+    };
+  }, []);
+
+  const currentState = world.states[selectedYear];
+  const currentCityMap = useMemo(
+    () => new Map(currentState.cities.map((city) => [city.slug, city])),
+    [currentState.cities],
+  );
+  const selectedSlug = searchParams.get("work");
+  const cityLookup = currentCityMap;
+  const visibleCities = useMemo(
+    () => currentState.cities.filter((city) => filter === "all" || city.discipline === filter),
+    [currentState.cities, filter],
+  );
+  const selectedWork = works.find((work) => work.slug === selectedSlug);
+  const workBySlug = useMemo(() => new Map(works.map((work) => [work.slug, work])), [works]);
+  const selectedCity = selectedSlug ? cityLookup.get(selectedSlug) : undefined;
+  const selectedWorkVisible = Boolean(selectedCity);
+  const introSequence = useMemo(
+    () =>
+      site.scene.introSequence
+        .map((slug) => works.find((work) => work.slug === slug))
+        .filter((work): work is Work => Boolean(work)),
+    [site.scene.introSequence, works],
+  );
+  const currentIntroWork = introSequence[Math.min(introIndex, Math.max(introSequence.length - 1, 0))];
+  const introFocusSlug = introActive && currentIntroWork ? currentIntroWork.slug : null;
+  const latestYear = world.years[world.years.length - 1];
+  const introPanelVisible = usePresence(introActive && Boolean(currentIntroWork), 260);
+  const leaderPanelVisible = usePresence(showLeader, 220);
+  const legendPanelVisible = usePresence(showLegend, 220);
+  const commandBriefVisible = usePresence(!selectedWork && !showLeader && !isTablet && !isShort, 220);
+  const selectedWorkPanel = useRetainedPresence(selectedWorkVisible ? selectedWork ?? null : null, Boolean(selectedWork && selectedWorkVisible), 240);
+  const hiddenWorkPanel = useRetainedPresence(
+    !selectedWorkVisible ? selectedWork ?? null : null,
+    Boolean(selectedWork && !selectedWorkVisible),
+    240,
+  );
+  const selectedPanelCity = selectedWorkPanel.retained
+    ? world.states[selectedYear].cities.find((city) => city.slug === selectedWorkPanel.retained?.slug) ?? selectedCity
+    : undefined;
+  const selectedPanelGithub =
+    selectedWorkPanel.retained?.code?.repo &&
+    github.repos[`${selectedWorkPanel.retained.code.repo.owner}/${selectedWorkPanel.retained.code.repo.name}`];
+  const introProgress = introSequence.length > 0 ? (introIndex + 1) / introSequence.length : 0;
+  const terrainAtPoint = useCallback((x: number, y: number) => {
+    return world.hexes.reduce<{ terrain: (typeof world.hexes)[number]["terrain"]; distance: number }>(
+      (closest, hex) => {
+        const distance = (hex.x - x) ** 2 + (hex.y - y) ** 2;
+        if (distance < closest.distance) {
+          return { terrain: hex.terrain, distance };
+        }
+        return closest;
+      },
+      { terrain: "plains", distance: Number.POSITIVE_INFINITY },
+    ).terrain;
+  }, [world]);
+  const unitRenderData = useMemo(
+    () =>
+      introActive
+        ? []
+        :
+      site.scene.toolUnits
+        .map((unit) => {
+          const routeCities = unit.route
+            .map((slug) => currentCityMap.get(slug))
+            .filter((city): city is NonNullable<typeof city> => Boolean(city));
+
+          if (routeCities.length < 2) {
+            return null;
+          }
+
+          const frozenTime = hoveredUnitId === unit.id ? frozenUnitTimeRef.current : sceneClock;
+          const position = getRoutePoint(routeCities, unit.speed, frozenTime);
+          const parked = parkedUnits[unit.id] && parkedUnits[unit.id].until > sceneClock ? parkedUnits[unit.id] : null;
+          const dragged = draggedUnit?.id === unit.id ? draggedUnit : null;
+          const finalPosition = dragged
+            ? { x: dragged.x, y: dragged.y, angle: position.angle }
+            : parked
+              ? { x: parked.x, y: parked.y, angle: position.angle }
+              : position;
+
+          return {
+            ...unit,
+            worldX: finalPosition.x,
+            worldY: finalPosition.y,
+            angle: finalPosition.angle,
+            terrain: terrainAtPoint(finalPosition.x, finalPosition.y),
+            parked: Boolean(parked),
+            dragged: Boolean(dragged),
+          };
+        })
+        .filter((unit): unit is NonNullable<typeof unit> => Boolean(unit)),
+    [currentCityMap, draggedUnit, hoveredUnitId, introActive, parkedUnits, sceneClock, site.scene.toolUnits, terrainAtPoint],
+  );
+
+  function clampCameraToWorld(next: CameraState) {
+    const marginX = Math.min(120, containerSize.width * 0.08);
+    const marginY = Math.min(88, containerSize.height * 0.08);
+    const minX = containerSize.width - world.width * next.zoom - marginX;
+    const maxX = marginX;
+    const minY = containerSize.height - world.height * next.zoom - marginY;
+    const maxY = marginY;
+
+    return {
+      ...next,
+      x: clamp(next.x, Math.min(minX, maxX), Math.max(minX, maxX)),
+      y: clamp(next.y, Math.min(minY, maxY), Math.max(minY, maxY)),
+    };
+  }
+
+  function setCameraTarget(
+    next:
+      | CameraState
+      | ((current: CameraState) => CameraState),
+  ) {
+    const resolved =
+      typeof next === "function" ? next(cameraTargetRef.current) : next;
+    cameraTargetRef.current = clampCameraToWorld(resolved);
+  }
+
+  function adjustZoom(
+    delta: number,
+    anchorX = containerSize.width * 0.5,
+    anchorY = containerSize.height * 0.5,
+    immediate = false,
+  ) {
+    const apply = (current: CameraState) => {
+      const zoomFactor = Math.exp(delta);
+      const nextZoom = clamp(current.zoom * zoomFactor, 0.58, 1.52);
+      const worldX = (anchorX - current.x) / current.zoom;
+      const worldY = (anchorY - current.y) / current.zoom;
+      return {
+        zoom: nextZoom,
+        x: anchorX - worldX * nextZoom,
+        y: anchorY - worldY * nextZoom,
+      };
+    };
+
+    const next = clampCameraToWorld(apply(cameraTargetRef.current));
+    cameraTargetRef.current = next;
+    if (immediate) {
+      setCamera(next);
+      return;
+    }
+    setCameraTarget(next);
+  }
+
+  function updateWorkInRoute(slug?: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (slug) {
+      params.set("work", slug);
+    } else {
+      params.delete("work");
+    }
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
+
+  function startIntro() {
+    if (introTimeoutRef.current) {
+      window.clearTimeout(introTimeoutRef.current);
+      introTimeoutRef.current = null;
+    }
+
+    introCancelledRef.current = false;
+    introCueKeyRef.current = null;
+    setShowLeader(false);
+    setFilter("all");
+    setIntroIndex(0);
+    setCameraTarget(initialCamera);
+    updateWorkInRoute();
+    setIntroActive(true);
+  }
+
+  function stopIntro() {
+    if (introTimeoutRef.current) {
+      window.clearTimeout(introTimeoutRef.current);
+      introTimeoutRef.current = null;
+    }
+    introCancelledRef.current = true;
+    introCueKeyRef.current = null;
+    setSelectedYear(latestYear);
+    setIntroActive(false);
+  }
+
+  function openWork(slug: string) {
+    selectionSourceRef.current = "map";
+    audio.playUiClick("city");
+    stopIntro();
+    setShowLeader(false);
+    updateWorkInRoute(slug);
+  }
+
+  function closePanels() {
+    audio.playUiClick("close");
+    setShowLeader(false);
+    updateWorkInRoute();
+  }
+
+  function nudgeTowardsPoint(x: number, y: number) {
+    const current = cameraTargetRef.current;
+    const viewportWidth = world.width;
+    const viewportHeight = world.height;
+    const desiredX = viewportWidth * (isTablet ? 0.52 : 0.58) - x * current.zoom;
+    const desiredY = viewportHeight * 0.54 - y * current.zoom;
+    const dx = clamp(desiredX - current.x, -120, 120);
+    const dy = clamp(desiredY - current.y, -72, 72);
+
+    setCameraTarget({
+      zoom: current.zoom,
+      x: current.x + dx * 0.22,
+      y: current.y + dy * 0.18,
+    });
+  }
+
+  function focusPointForIntro(x: number, y: number) {
+    const current = cameraTargetRef.current;
+    const introZoom = clamp(Math.max(current.zoom, isMobile ? 0.96 : 1.02), 0.72, 1.18);
+    const viewportWidth = world.width;
+    const viewportHeight = world.height;
+    const desiredX = viewportWidth * 0.5 - x * introZoom;
+    const desiredY = viewportHeight * (isMobile ? 0.58 : 0.56) - y * introZoom;
+
+    setCameraTarget({
+      zoom: introZoom,
+      x: current.x + clamp(desiredX - current.x, -340, 340) * 0.78,
+      y: current.y + clamp(desiredY - current.y, -220, 220) * 0.72,
+    });
+  }
+
+  function resetView() {
+    audio.playUiClick("toggle");
+    stopIntro();
+    setCameraTarget(initialCamera);
+  }
+
+  function jumpToWorkYear(work: Work) {
+    audio.playUiClick("button");
+    const year = world.years.find((entry) => entry >= work.startYear) ?? world.years[0];
+    setSelectedYear(year);
+  }
+
+  function worldPointToScreen(x: number, y: number) {
+    return {
+      x: clamp(camera.x + x * camera.zoom, 12, containerSize.width - 268),
+      y: clamp(camera.y + y * camera.zoom, 12, containerSize.height - 156),
+    };
+  }
+
+  function screenPointToWorld(clientX: number, clientY: number) {
+    const rect = containerRef.current?.getBoundingClientRect();
+    const localX = clientX - (rect?.left ?? 0);
+    const localY = clientY - (rect?.top ?? 0);
+    return {
+      x: clamp((localX - camera.x) / camera.zoom, 0, world.width),
+      y: clamp((localY - camera.y) / camera.zoom, 0, world.height),
+      localX,
+      localY,
+    };
+  }
+
+  function clearUnitHover(unitId?: string | null) {
+    if (unitHoverReleaseRef.current) {
+      window.clearTimeout(unitHoverReleaseRef.current);
+      unitHoverReleaseRef.current = null;
+    }
+
+    if (!unitId) {
+      setHoveredUnitId(null);
+      setHoveredUnitCard(null);
+      return;
+    }
+
+    setHoveredUnitId((current) => (current === unitId ? null : current));
+    setHoveredUnitCard((current) => (current?.id === unitId ? null : current));
+  }
+
+  function scheduleUnitHoverRelease(unitId?: string | null) {
+    if (unitHoverReleaseRef.current) {
+      window.clearTimeout(unitHoverReleaseRef.current);
+    }
+
+    unitHoverReleaseRef.current = window.setTimeout(() => {
+      clearUnitHover(unitId);
+    }, 920);
+  }
+
+  function nearestHexCenter(x: number, y: number) {
+    return world.hexes.reduce(
+      (closest, hex) => {
+        const distance = (hex.x - x) ** 2 + (hex.y - y) ** 2;
+        if (distance < closest.distance) {
+          return { x: hex.x, y: hex.y, distance };
+        }
+        return closest;
+      },
+      { x, y, distance: Number.POSITIVE_INFINITY },
+    );
+  }
+
+  useEffect(() => {
+    if (!selectedCity) {
+      return;
+    }
+
+    if (selectionSourceRef.current === "map") {
+      selectionSourceRef.current = "route";
+      return;
+    }
+
+    nudgeTowardsPoint(selectedCity.x, selectedCity.y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCity?.slug, containerSize.height, containerSize.width]);
+
+  useEffect(() => {
+    if (selectedSlug || showLeader) {
+      setIntroActive(false);
+    }
+  }, [selectedSlug, showLeader]);
+
+  useEffect(() => {
+    if (!introActive && introCancelledRef.current) {
+      setSelectedYear(latestYear);
+    }
+  }, [introActive, latestYear]);
+
+  useEffect(() => {
+    if (!introActive || introSequence.length === 0 || selectedSlug || showLeader) {
+      return;
+    }
+
+    const currentWork = introSequence[Math.min(introIndex, introSequence.length - 1)];
+    const stepDuration = window.__CIVFOLIO_INTRO_STEP_MS ?? 2100;
+    const finalDuration = window.__CIVFOLIO_INTRO_FINAL_MS ?? 1800;
+    const cueKey = `${currentWork.slug}:${introIndex}`;
+    if (introCueKeyRef.current !== cueKey) {
+      audio.playIntroCue(introIndex >= introSequence.length - 1 ? "complete" : "founding");
+      introCueKeyRef.current = cueKey;
+    }
+    const year = world.years.find((entry) => entry >= currentWork.startYear) ?? world.years[0];
+    const state = world.states[year];
+    const city = state.cities.find((entry) => entry.slug === currentWork.slug);
+    setSelectedYear(year);
+    if (city) {
+      focusPointForIntro(city.x, city.y);
+    }
+
+    introTimeoutRef.current = window.setTimeout(() => {
+      if (introIndex >= introSequence.length - 1) {
+        setSelectedYear(latestYear);
+        setCameraTarget(initialCamera);
+        setIntroActive(false);
+        return;
+      }
+      setIntroIndex((value) => value + 1);
+    }, introIndex === introSequence.length - 1 ? finalDuration : stepDuration);
+
+    return () => {
+      if (introTimeoutRef.current) {
+        window.clearTimeout(introTimeoutRef.current);
+        introTimeoutRef.current = null;
+      }
+    };
+    // focusPointForIntro intentionally tracks the latest layout/camera refs without driving effect resets.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audio.playIntroCue, containerSize.width, introActive, introIndex, introSequence, isMobile, latestYear, selectedSlug, showLeader, world.states, world.years]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        stopIntro();
+        closePanels();
+      }
+
+      if (event.key === "+") {
+        stopIntro();
+        adjustZoom(0.08);
+      }
+
+      if (event.key === "-") {
+        stopIntro();
+        adjustZoom(-0.08);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // Keyboard handlers intentionally bind to the latest route/camera closures without re-attaching per render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerSize.height, containerSize.width, pathname, router, searchParams]);
+
+  return (
+    <section className="select-none px-3 pb-4 sm:px-4 lg:px-6">
+      <div
+        ref={containerRef}
+        data-map-drag-surface="true"
+        className={cn(
+          "relative min-h-[calc(100vh-6.75rem)] overflow-hidden rounded-[34px] border border-[rgba(244,211,141,0.18)] bg-[radial-gradient(circle_at_top,_rgba(70,120,160,0.28),_rgba(11,12,17,0.98)_56%)] shadow-[0_40px_120px_rgba(0,0,0,0.42)]",
+          isDragging ? "cursor-grabbing" : "cursor-grab",
+        )}
+        style={{ touchAction: "none" }}
+        onPointerMove={(event) => {
+          if (dragRef.current) {
+            const dx = event.clientX - dragRef.current.x;
+            const dy = event.clientY - dragRef.current.y;
+            dragDistanceRef.current += Math.abs(dx) + Math.abs(dy);
+            if (dragDistanceRef.current > 6) {
+              suppressCityClickRef.current = true;
+            }
+            setCameraTarget((current) => ({
+              ...current,
+              x: current.x + dx,
+              y: current.y + dy,
+            }));
+            dragRef.current = {
+              x: event.clientX,
+              y: event.clientY,
+              pointerId: dragRef.current.pointerId,
+            };
+          }
+        }}
+        onPointerDown={(event) => {
+          if (isInteractiveMapTarget(event.target)) {
+            stopIntro();
+            return;
+          }
+          stopIntro();
+          dragRef.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+          dragDistanceRef.current = 0;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          setIsDragging(true);
+        }}
+        onPointerUp={(event) => {
+          if (dragRef.current) {
+            event.currentTarget.releasePointerCapture(dragRef.current.pointerId);
+          }
+          dragRef.current = null;
+          setIsDragging(false);
+          if (dragDistanceRef.current > 6) {
+            window.setTimeout(() => {
+              suppressCityClickRef.current = false;
+            }, 0);
+          } else {
+            suppressCityClickRef.current = false;
+          }
+        }}
+        onPointerCancel={(event) => {
+          if (dragRef.current) {
+            event.currentTarget.releasePointerCapture(dragRef.current.pointerId);
+          }
+          dragRef.current = null;
+          dragDistanceRef.current = 0;
+          suppressCityClickRef.current = false;
+          setIsDragging(false);
+        }}
+        onPointerLeave={() => {
+          dragRef.current = null;
+          setIsDragging(false);
+          setHoveredCity(null);
+        }}
+        onWheel={(event) => {
+          if (isInteractiveMapTarget(event.target)) {
+            return;
+          }
+          event.preventDefault();
+          stopIntro();
+          const rect = event.currentTarget.getBoundingClientRect();
+          const anchorX = event.clientX - rect.left;
+          const anchorY = event.clientY - rect.top;
+          const normalizedDelta = clamp(-event.deltaY * 0.0011, -0.16, 0.16);
+          adjustZoom(normalizedDelta, anchorX, anchorY, true);
+        }}
+      >
+        <div className="world-atmosphere pointer-events-none absolute inset-0" />
+
+        <svg
+          viewBox={`0 0 ${world.width} ${world.height}`}
+          className="absolute inset-0 h-full w-full"
+          aria-label="CivFolio world map"
+          role="img"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              closePanels();
+            }
+          }}
+        >
+          <defs>
+            <linearGradient id="world-sea" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#183b5c" />
+              <stop offset="100%" stopColor="#060c14" />
+            </linearGradient>
+            <radialGradient id="map-vignette" cx="50%" cy="45%" r="58%">
+              <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+              <stop offset="100%" stopColor="rgba(0,0,0,0.28)" />
+            </radialGradient>
+            <filter id="city-drop" x="-60%" y="-60%" width="220%" height="220%">
+              <feDropShadow dx="0" dy="12" stdDeviation="10" floodColor="#000000" floodOpacity="0.28" />
+            </filter>
+            <filter id="city-outer-glow" x="-70%" y="-70%" width="240%" height="240%">
+              <feGaussianBlur stdDeviation="10" result="glow" />
+              <feMerge>
+                <feMergeNode in="glow" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <pattern id="terrain-coast" width="120" height="120" patternUnits="userSpaceOnUse">
+              <path d="M 0 26 C 18 18 34 18 48 26 C 64 35 82 35 100 26" fill="none" stroke="rgba(154,213,246,0.16)" strokeWidth="4" />
+              <path d="M 12 58 C 32 48 48 48 66 58 C 80 66 100 66 118 58" fill="none" stroke="rgba(154,213,246,0.12)" strokeWidth="3" />
+            </pattern>
+            <pattern id="terrain-plains" width="112" height="112" patternUnits="userSpaceOnUse">
+              <path d="M 8 86 C 24 72 44 72 56 86" fill="none" stroke="rgba(218,236,157,0.16)" strokeWidth="3" />
+              <circle cx="78" cy="44" r="3" fill="rgba(231,245,185,0.18)" />
+              <circle cx="90" cy="48" r="2" fill="rgba(231,245,185,0.12)" />
+            </pattern>
+            <pattern id="terrain-forest" width="116" height="116" patternUnits="userSpaceOnUse">
+              <path d="M 18 76 L 24 60 L 30 76 Z M 48 54 L 55 36 L 62 54 Z M 76 82 L 84 60 L 92 82 Z" fill="rgba(170,214,169,0.2)" />
+              <rect x="23" y="76" width="2" height="6" fill="rgba(120,88,46,0.28)" />
+              <rect x="54" y="54" width="2" height="7" fill="rgba(120,88,46,0.28)" />
+              <rect x="83" y="82" width="2" height="7" fill="rgba(120,88,46,0.28)" />
+            </pattern>
+            <pattern id="terrain-hills" width="120" height="120" patternUnits="userSpaceOnUse">
+              <path d="M 4 82 C 16 62 34 62 46 82 C 58 98 74 98 90 82" fill="none" stroke="rgba(232,203,158,0.16)" strokeWidth="3" />
+              <path d="M 52 38 C 66 20 84 20 98 38" fill="none" stroke="rgba(232,203,158,0.12)" strokeWidth="3" />
+            </pattern>
+            <pattern id="terrain-highlands" width="126" height="126" patternUnits="userSpaceOnUse">
+              <path d="M 14 94 L 28 62 L 42 94 Z M 58 72 L 74 36 L 90 72 Z M 88 102 L 102 72 L 116 102 Z" fill="rgba(215,191,233,0.14)" />
+            </pattern>
+          </defs>
+
+          <rect width={world.width} height={world.height} fill="url(#world-sea)" />
+          <g transform={`translate(${camera.x} ${camera.y}) scale(${camera.zoom})`}>
+            {world.hexes.map((hex) => (
+              <g key={hex.id}>
+                <polygon
+                  points={hex.points}
+                  fill={terrainFill[hex.terrain]}
+                  fillOpacity={hex.terrain === "coast" ? 0.84 : 0.94}
+                  stroke="rgba(255,255,255,0.06)"
+                  strokeWidth={2}
+                />
+                <polygon
+                  points={hex.points}
+                  fill={terrainPattern[hex.terrain]}
+                  opacity={hex.terrain === "coast" ? 0.85 : 0.52}
+                />
+              </g>
+            ))}
+
+            <path
+              d="M 80 610 C 240 540, 320 470, 490 490 C 670 512, 720 640, 910 620 C 1060 603, 1130 530, 1260 450"
+              fill="none"
+              stroke="rgba(122,189,232,0.18)"
+              strokeWidth={18}
+              strokeLinecap="round"
+            />
+            <path
+              d="M 80 610 C 240 540, 320 470, 490 490 C 670 512, 720 640, 910 620 C 1060 603, 1130 530, 1260 450"
+              fill="none"
+              stroke="rgba(154,213,246,0.42)"
+              strokeWidth={7}
+              strokeLinecap="round"
+            />
+            <path
+              d="M 260 120 C 340 200, 340 320, 470 380 C 560 420, 610 460, 670 560"
+              fill="none"
+              stroke="rgba(154,213,246,0.22)"
+              strokeWidth={12}
+              strokeLinecap="round"
+            />
+            <path
+              d="M 260 120 C 340 200, 340 320, 470 380 C 560 420, 610 460, 670 560"
+              fill="none"
+              stroke="rgba(154,213,246,0.4)"
+              strokeWidth={5}
+              strokeLinecap="round"
+            />
+
+            {currentState.routes
+              .filter((route) => {
+                if (filter === "all") {
+                  return true;
+                }
+                const from = currentState.cities.find((city) => city.slug === route.from);
+                const to = currentState.cities.find((city) => city.slug === route.to);
+                return from?.discipline === filter || to?.discipline === filter;
+              })
+              .map((route) => (
+                <g key={route.id}>
+                  <path d={route.path} fill="none" stroke="rgba(8,4,3,0.42)" strokeWidth={8} />
+                  <path
+                    d={route.path}
+                    fill="none"
+                    stroke="#f1cf8b"
+                    strokeOpacity="0.7"
+                    strokeWidth={3.2}
+                    strokeDasharray="12 10"
+                    className="route-flow"
+                  />
+                </g>
+              ))}
+
+            {visibleCities.flatMap((city) =>
+              city.greatWorks
+                .filter((item) => !item.unlockYear || item.unlockYear <= selectedYear)
+                .map((item) => (
+                  <g
+                    key={`${city.slug}-${item.title}`}
+                    transform={`translate(${city.x + item.xOffset} ${city.y + item.yOffset})`}
+                    opacity={selectedSlug && selectedSlug !== city.slug ? "0.5" : "0.82"}
+                  >
+                    {(() => {
+                      const key = `${city.slug}:${item.title}`;
+                      const isHovered = hoveredGreatWork === key;
+                      const width = Math.max(128, item.title.length * 7.1 + 34);
+                      return (
+                        <>
+                          <g
+                            transform="translate(26 48)"
+                            data-map-interactive="true"
+                            className="cursor-help"
+                            onMouseEnter={() => setHoveredGreatWork(key)}
+                            onMouseLeave={() => setHoveredGreatWork((current) => (current === key ? null : current))}
+                          >
+                            <GreatWorkIllustration
+                              discipline={city.discipline}
+                              title={item.title}
+                              active={selectedSlug === city.slug || introFocusSlug === city.slug}
+                            />
+                          </g>
+                          <g
+                            className="transition-opacity duration-150 ease-out"
+                            opacity={isHovered ? 1 : 0}
+                            pointerEvents="none"
+                          >
+                            <rect
+                              x={0}
+                              y={0}
+                              width={width}
+                              height={42}
+                              rx={15}
+                              fill="rgba(26,18,12,0.82)"
+                              stroke={city.bannerTone}
+                              strokeOpacity="0.76"
+                              strokeWidth={1}
+                            />
+                            <circle cx={16} cy={21} r={4.5} fill={city.bannerTone} fillOpacity={0.82} />
+                            <text x={28} y={25} fontSize={12} fill="#f7e8c7" style={{ letterSpacing: "0.08em" }}>
+                              {item.title}
+                            </text>
+                          </g>
+                        </>
+                      );
+                    })()}
+                  </g>
+                )),
+            )}
+
+            {visibleCities.flatMap((city) => {
+              const work = workBySlug.get(city.slug);
+              if (!work) {
+                return [];
+              }
+
+              const improvementLabels = Array.from(
+                new Set(
+                  [
+                    ...work.techTree.slice(0, 2),
+                    ...(city.slug === "robot-future" || city.slug === "ibm-support-innovation"
+                      ? ["Agentic AI"]
+                      : []),
+                  ].filter(Boolean),
+                ),
+              ).slice(0, 3);
+
+              return improvementLabels.map((label, index) => {
+                const offset = improvementOffsets[index % improvementOffsets.length];
+                return (
+                  <g
+                    key={`${city.slug}-improvement-${label}`}
+                    transform={`translate(${city.x + offset.x} ${city.y + offset.y})`}
+                    opacity={0.88}
+                    pointerEvents="none"
+                  >
+                    <ImprovementTile
+                      kind={getImprovementKind(label)}
+                      label={label}
+                      tone={city.bannerTone}
+                    />
+                  </g>
+                );
+              });
+            })}
+
+            {visibleCities.map((city) => {
+              const isSelected = selectedSlug === city.slug || introFocusSlug === city.slug;
+              const isHovered = hoveredCity?.slug === city.slug;
+              const showBanner = true;
+              const bannerWidth = city.title.length * 7.9 + 26;
+              const adornmentLayout = cityAdornmentLayout[city.slug];
+              const bannerLayout = cityBannerLayout[city.slug] ?? {
+                dx: city.radius + 14,
+                dy: -city.radius - 12,
+                anchor: "start" as const,
+              };
+              const bannerX =
+                bannerLayout.anchor === "middle"
+                  ? -bannerWidth / 2
+                  : bannerLayout.anchor === "end"
+                    ? -bannerWidth
+                    : 0;
+              const textX = bannerX + 13;
+
+              return (
+                <g
+                  key={city.slug}
+                  transform={`translate(${city.x} ${city.y})`}
+                >
+                  <circle
+                    r={city.radius + 26}
+                    role="button"
+                    tabIndex={0}
+                    data-map-interactive="true"
+                    aria-label={`Open ${city.title}`}
+                    fill="transparent"
+                    className="cursor-pointer outline-none"
+                    onClick={() => {
+                      if (suppressCityClickRef.current) {
+                        return;
+                      }
+                      openWork(city.slug);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        openWork(city.slug);
+                      }
+                    }}
+                    onMouseEnter={(event) => {
+                      const rect = containerRef.current?.getBoundingClientRect();
+                      setHoveredCity({
+                        slug: city.slug,
+                        x: event.clientX - (rect?.left ?? 0),
+                        y: event.clientY - (rect?.top ?? 0),
+                      });
+                    }}
+                    onMouseMove={(event) => {
+                      const rect = containerRef.current?.getBoundingClientRect();
+                      setHoveredCity({
+                        slug: city.slug,
+                        x: event.clientX - (rect?.left ?? 0),
+                        y: event.clientY - (rect?.top ?? 0),
+                      });
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredCity((current) => (current?.slug === city.slug ? null : current));
+                    }}
+                  />
+                  <g
+                    aria-hidden="true"
+                    pointerEvents="none"
+                    style={{ filter: isSelected ? "url(#city-outer-glow)" : "url(#city-drop)" }}
+                  >
+                  {isSelected ? (
+                    <circle
+                      r={city.radius + 18}
+                      fill={disciplineTone[city.discipline]}
+                      fillOpacity={0.18}
+                      className="city-pulse"
+                    />
+                  ) : null}
+                  <circle r={city.radius + 11} fill={city.bannerTone} fillOpacity={0.12} />
+                  {adornmentLayout ? (
+                    <g
+                      transform={`translate(${adornmentLayout.dx} ${adornmentLayout.dy}) scale(${adornmentLayout.scale ?? 1})`}
+                      opacity={isSelected || isHovered ? 1 : 0.9}
+                    >
+                      <CityAdornment slug={city.slug} level={city.level} discipline={city.discipline} />
+                    </g>
+                  ) : null}
+                  <CityIllustration
+                    level={city.level}
+                    discipline={city.discipline}
+                    radius={city.radius + (city.level === "wonder" ? 10 : 4)}
+                    active={isSelected || isHovered}
+                  />
+                  {showBanner ? (
+                    <g transform={`translate(${bannerLayout.dx} ${bannerLayout.dy})`} opacity={isSelected ? 1 : 0.92}>
+                      <rect
+                        x={bannerX}
+                        width={bannerWidth}
+                        height={28}
+                        rx={14}
+                        fill="rgba(25,16,11,0.78)"
+                        stroke={city.bannerTone}
+                        strokeOpacity="0.84"
+                        strokeWidth={1.2}
+                      />
+                      <text
+                        x={textX}
+                        y={18}
+                        fontSize={12}
+                        fill="#f7e8c7"
+                        stroke="rgba(12,9,8,0.46)"
+                        strokeWidth="0.8"
+                        paintOrder="stroke"
+                        style={{ letterSpacing: "0.12em", textTransform: "uppercase" }}
+                      >
+                        {city.title}
+                      </text>
+                    </g>
+                  ) : null}
+                  </g>
+                </g>
+              );
+            })}
+
+            {unitRenderData.map((unit) => {
+              const active = hoveredUnitId === unit.id || unit.parked || unit.dragged;
+              const facingLeft = Math.abs(unit.angle) > Math.PI / 2;
+              const uprightAngle = facingLeft
+                ? unit.angle > 0
+                  ? unit.angle - Math.PI
+                  : unit.angle + Math.PI
+                : unit.angle;
+              const rotation = clamp((uprightAngle * 180) / Math.PI, -38, 38);
+
+              return (
+                <g
+                  key={unit.id}
+                  transform={`translate(${unit.worldX} ${unit.worldY})`}
+                  opacity={active ? 1 : 0.36}
+                  style={{ transition: "opacity 180ms ease-out, transform 180ms ease-out, filter 180ms ease-out" }}
+                  filter={active ? "url(#city-drop)" : undefined}
+                >
+                  <circle
+                    r={34}
+                    role="button"
+                    tabIndex={0}
+                    data-map-interactive="true"
+                    aria-label={`Traveler ${unit.label}`}
+                    fill="transparent"
+                    className="cursor-pointer outline-none"
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      stopIntro();
+                      if (unitHoverReleaseRef.current) {
+                        window.clearTimeout(unitHoverReleaseRef.current);
+                        unitHoverReleaseRef.current = null;
+                      }
+                      frozenUnitTimeRef.current = sceneClock;
+                      audio.playUiClick("troop");
+                      const startPoint = screenPointToWorld(event.clientX, event.clientY);
+                      unitDragRef.current = {
+                        id: unit.id,
+                        pointerId: event.pointerId,
+                        offsetX: unit.worldX - startPoint.x,
+                        offsetY: unit.worldY - startPoint.y,
+                      };
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      setParkedUnits((current) => {
+                        const next = { ...current };
+                        delete next[unit.id];
+                        return next;
+                      });
+                      setDraggedUnit({ id: unit.id, x: unit.worldX, y: unit.worldY });
+                      setHoveredUnitId(unit.id);
+                      setHoveredUnitCard({
+                        id: unit.id,
+                        label: unit.label,
+                        type: unit.type,
+                        ...worldPointToScreen(unit.worldX, unit.worldY),
+                      });
+                    }}
+                    onPointerMove={(event) => {
+                      if (unitDragRef.current?.id !== unit.id || unitDragRef.current.pointerId !== event.pointerId) {
+                        return;
+                      }
+                      event.preventDefault();
+                      event.stopPropagation();
+                      const next = screenPointToWorld(event.clientX, event.clientY);
+                      setDraggedUnit({
+                        id: unit.id,
+                        x: next.x + unitDragRef.current.offsetX,
+                        y: next.y + unitDragRef.current.offsetY,
+                      });
+                      setHoveredUnitCard((current) =>
+                        current?.id === unit.id
+                          ? {
+                              ...current,
+                              x: clamp(next.localX + 12, 12, containerSize.width - 268),
+                              y: clamp(next.localY - 12, 12, containerSize.height - 156),
+                            }
+                          : current,
+                      );
+                    }}
+                    onPointerUp={(event) => {
+                      if (unitDragRef.current?.id !== unit.id || unitDragRef.current.pointerId !== event.pointerId) {
+                        return;
+                      }
+                      event.preventDefault();
+                      event.stopPropagation();
+                      event.currentTarget.releasePointerCapture(event.pointerId);
+                      unitDragRef.current = null;
+                      if (draggedUnit?.id === unit.id) {
+                        const snapped = nearestHexCenter(draggedUnit.x, draggedUnit.y);
+                        setDraggedUnit(null);
+                        setParkedUnits((current) => ({
+                          ...current,
+                          [unit.id]: { x: snapped.x, y: snapped.y, until: sceneClock + 15000 },
+                        }));
+                        setHoveredUnitId(unit.id);
+                        setHoveredUnitCard({
+                          id: unit.id,
+                          label: unit.label,
+                          type: unit.type,
+                          ...worldPointToScreen(snapped.x, snapped.y),
+                        });
+                        scheduleUnitHoverRelease(unit.id);
+                      }
+                    }}
+                    onPointerCancel={(event) => {
+                      if (unitDragRef.current?.id !== unit.id || unitDragRef.current.pointerId !== event.pointerId) {
+                        return;
+                      }
+                      event.preventDefault();
+                      event.stopPropagation();
+                      event.currentTarget.releasePointerCapture(event.pointerId);
+                      unitDragRef.current = null;
+                      setDraggedUnit(null);
+                      scheduleUnitHoverRelease(unit.id);
+                    }}
+                    onMouseEnter={(event) => {
+                      if (draggedUnit?.id === unit.id) {
+                        return;
+                      }
+                      if (unitHoverReleaseRef.current) {
+                        window.clearTimeout(unitHoverReleaseRef.current);
+                        unitHoverReleaseRef.current = null;
+                      }
+                      frozenUnitTimeRef.current = sceneClock;
+                      if (hoveredUnitId !== unit.id) {
+                        audio.playUiClick("troop");
+                      }
+                      const next = screenPointToWorld(event.clientX, event.clientY);
+                      setHoveredUnitId(unit.id);
+                      setHoveredUnitCard({
+                        id: unit.id,
+                        label: unit.label,
+                        type: unit.type,
+                        x: clamp(next.localX + 12, 12, containerSize.width - 268),
+                        y: clamp(next.localY - 12, 12, containerSize.height - 156),
+                      });
+                    }}
+                    onMouseMove={(event) => {
+                      if (draggedUnit?.id === unit.id) {
+                        return;
+                      }
+                      if (unitHoverReleaseRef.current) {
+                        window.clearTimeout(unitHoverReleaseRef.current);
+                        unitHoverReleaseRef.current = null;
+                      }
+                      const next = screenPointToWorld(event.clientX, event.clientY);
+                      setHoveredUnitCard((current) =>
+                        current?.id === unit.id
+                          ? {
+                              ...current,
+                              x: clamp(next.localX + 12, 12, containerSize.width - 268),
+                              y: clamp(next.localY - 12, 12, containerSize.height - 156),
+                            }
+                          : current,
+                      );
+                    }}
+                    onMouseLeave={() => scheduleUnitHoverRelease(unit.id)}
+                    onFocus={() => {
+                      if (unitHoverReleaseRef.current) {
+                        window.clearTimeout(unitHoverReleaseRef.current);
+                        unitHoverReleaseRef.current = null;
+                      }
+                      frozenUnitTimeRef.current = sceneClock;
+                      audio.playUiClick("troop");
+                      setHoveredUnitId(unit.id);
+                      setHoveredUnitCard({
+                        id: unit.id,
+                        label: unit.label,
+                        type: unit.type,
+                        ...worldPointToScreen(unit.worldX, unit.worldY),
+                      });
+                    }}
+                    onBlur={() => scheduleUnitHoverRelease(unit.id)}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                  />
+                  <g transform={`scale(${facingLeft ? -1 : 1} 1) rotate(${rotation}) scale(${active ? 1.12 : 0.92})`}>
+                    <ToolUnitSprite
+                      type={unit.type}
+                      color={unit.color}
+                      label={unit.label}
+                      active={active}
+                      onWater={unit.terrain === "coast"}
+                    />
+                  </g>
+                </g>
+              );
+            })}
+          </g>
+          <rect width={world.width} height={world.height} fill="url(#map-vignette)" pointerEvents="none" />
+        </svg>
+
+        <div
+          className="world-fog pointer-events-none absolute inset-0"
+        />
+
+        <div
+          className={cn("pointer-events-none absolute inset-x-4 top-4 z-20 flex items-start justify-between gap-4", isMobile ? "flex-col gap-3" : "flex-wrap")}
+        >
+          <div
+            className={cn(
+              "pointer-events-auto rounded-[26px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.64)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl",
+              isMobile
+                ? "max-w-[17rem] px-4 py-3"
+                : isTablet
+                  ? "max-w-[28rem] px-5 py-4"
+                  : "max-w-[36rem] px-5 py-4",
+            )}
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="rounded-full border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] px-3 py-1 text-[10px] uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+                Living world portfolio
+              </span>
+              <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">
+                {currentState.label}
+              </span>
+            </div>
+            <h1 className={cn("mt-3 font-display leading-[0.94] text-[var(--parchment)]", isMobile ? "text-[2.35rem]" : isTablet ? "text-5xl" : "text-6xl")}>
+              {leader.name}
+              <span className="mt-2 block text-[0.5em] leading-[1.08] uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                Strategy Map of Work
+              </span>
+            </h1>
+            {isMobile ? null : (
+              <p className={cn("mt-3 max-w-xl text-[var(--muted-soft)]", isTablet ? "text-sm leading-6" : "text-sm leading-7")}>
+                Pan, zoom, scrub time, and open cities to inspect the systems, products, and media work that built this world.
+              </p>
+            )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <OverlayButton
+                active={showLeader}
+                onClick={() => {
+                  audio.playUiClick("button");
+                  stopIntro();
+                  setShowLeader((value) => !value);
+                  updateWorkInRoute();
+                }}
+              >
+                Leader Profile
+              </OverlayButton>
+              {isMobile ? null : (
+                <>
+                  <Link
+                    href="/archive"
+                    className="inline-flex min-h-10 items-center justify-center rounded-full border border-white/12 bg-[rgba(255,255,255,0.06)] px-4 py-2 text-[11px] uppercase tracking-[0.24em] text-[var(--muted-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+                  >
+                    Civilopedia
+                  </Link>
+                  <Link
+                    href="/about"
+                    className="inline-flex min-h-10 items-center justify-center rounded-full border border-white/12 bg-[rgba(255,255,255,0.06)] px-4 py-2 text-[11px] uppercase tracking-[0.24em] text-[var(--muted-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+                  >
+                    About
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className={cn("pointer-events-auto flex items-start justify-end gap-3", isMobile ? "w-full flex-wrap" : "flex-wrap")}>
+            {isMobile ? null : <StatChip label="Visible Cities" value={visibleCities.length} />}
+            {isMobile ? null : (
+              <StatChip
+                label="Map Focus"
+                value={filter === "all" ? "All" : formatDisciplineLabel(filter)}
+              />
+            )}
+            <div className={cn("rounded-[24px] border border-white/10 bg-[rgba(14,10,8,0.62)] p-2 shadow-[0_18px_45px_rgba(0,0,0,0.24)] backdrop-blur-xl", isMobile ? "w-full max-w-[19.5rem]" : "")}>
+              <div className={cn("flex flex-wrap gap-2", isMobile ? "justify-start" : "")}>
+                <OverlayButton
+                  onClick={() => {
+                    audio.playUiClick("toggle");
+                    stopIntro();
+                    adjustZoom(-0.08);
+                  }}
+                >
+                  -
+                </OverlayButton>
+                <OverlayButton
+                  onClick={() => {
+                    audio.playUiClick("toggle");
+                    stopIntro();
+                    adjustZoom(0.08);
+                  }}
+                >
+                  +
+                </OverlayButton>
+                <OverlayButton onClick={resetView}>Reset</OverlayButton>
+                <OverlayButton
+                  onClick={() => {
+                    audio.playUiClick("toggle");
+                    void audio.toggleMusic();
+                  }}
+                  className={isMobile ? "min-w-[8.75rem]" : undefined}
+                >
+                  {audio.status === "on"
+                    ? `${site.audio.label} on`
+                    : audio.status === "blocked"
+                      ? "Audio blocked"
+                      : `${site.audio.label} off`}
+                </OverlayButton>
+                <OverlayButton
+                  active={showLegend}
+                  onClick={() => {
+                    audio.playUiClick("toggle");
+                    stopIntro();
+                    setShowLegend((value) => !value);
+                  }}
+                  className={isMobile ? "px-3" : undefined}
+                >
+                  Map Key
+                </OverlayButton>
+                {introActive ? null : (
+                  <OverlayButton
+                    onClick={() => {
+                      audio.playUiClick("button");
+                      startIntro();
+                    }}
+                    className={isMobile ? "min-w-[8.75rem]" : undefined}
+                  >
+                    Replay Intro
+                  </OverlayButton>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {introPanelVisible && currentIntroWork ? (
+          <div className={cn("pointer-events-none absolute inset-x-4 z-20 flex justify-center", isMobile ? "top-44" : "top-28")}>
+            <div
+              data-testid="intro-panel"
+              className={cn(
+                "panel-enter rounded-[26px] border border-[rgba(244,211,141,0.18)] bg-[rgba(17,12,9,0.72)] text-center shadow-[0_24px_70px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+                isMobile ? "w-[min(22rem,100%)] px-4 py-4" : "w-[min(30rem,100%)] px-5 py-4",
+                introActive
+                  ? "pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0"
+                  : "pointer-events-none opacity-0 -translate-y-3 scale-[0.985] blur-[2px]",
+              )}
+            >
+              <div className="text-[10px] uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+                Campaign Replay · {introIndex + 1}/{introSequence.length}
+              </div>
+              <div
+                data-testid="intro-title"
+                className={cn("mt-2 font-display text-[var(--parchment)]", isMobile ? "text-[2rem] leading-none" : "text-3xl")}
+              >
+                Founding {currentIntroWork.title}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
+                <span className="rounded-full border border-white/10 px-3 py-1">{currentIntroWork.era}</span>
+                <span className="rounded-full border border-white/10 px-3 py-1">{currentIntroWork.startYear}</span>
+                <span className="rounded-full border border-white/10 px-3 py-1">{formatDisciplineLabel(currentIntroWork.discipline)}</span>
+              </div>
+              <p className={cn("mt-3 text-[var(--muted-soft)]", isMobile ? "text-sm leading-6" : "text-sm leading-7")}>
+                {currentIntroWork.summary}
+              </p>
+              <div className="mt-4 h-2 overflow-hidden rounded-full border border-white/10 bg-[rgba(255,255,255,0.05)]">
+                <div
+                  className="h-full rounded-full bg-[linear-gradient(90deg,rgba(244,211,141,0.72),rgba(244,211,141,0.96))] transition-[width] duration-500 ease-out"
+                  style={{ width: `${introProgress * 100}%` }}
+                />
+              </div>
+              <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
+                The world is founding itself. Drag, zoom, or open any city to take control.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <OverlayButton
+                  onClick={() => {
+                    audio.playUiClick("close");
+                    stopIntro();
+                  }}
+                >
+                  Skip Intro
+                </OverlayButton>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <div
+          data-map-interactive="true"
+          className={cn(
+            "absolute z-20 rounded-[28px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.68)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl",
+            isMobile
+              ? "bottom-4 left-4 right-4 px-4 py-3"
+              : isTablet
+                ? "bottom-4 left-4 right-40 px-5 py-4"
+                : "bottom-4 left-4 max-w-[620px] px-5 py-4",
+          )}
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.28em] text-[var(--muted)]">Time progression</div>
+              <div className="mt-1 font-display text-3xl text-[var(--accent-strong)]">{selectedYear}</div>
+            </div>
+            <div className={cn("text-[var(--muted-soft)]", isMobile ? "max-w-full text-[13px] leading-5" : "text-sm leading-7")}>{currentState.description}</div>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={world.years.length - 1}
+            step={1}
+            value={world.years.indexOf(selectedYear)}
+            onChange={(event) => {
+              stopIntro();
+              setSelectedYear(world.years[Number(event.currentTarget.value)]);
+            }}
+            className="mt-4 w-full accent-[var(--accent)]"
+            aria-label="Timeline slider"
+          />
+          <div className="mt-3 flex justify-between text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">
+            {world.years.map((year) => (
+              <span key={year}>{year}</span>
+            ))}
+          </div>
+          <div className={cn("mt-4", isMobile ? "-mx-1 overflow-x-auto pb-1" : "")}>
+            <div className={cn("flex gap-2", isMobile ? "min-w-max px-1" : "flex-wrap")}>
+              {(["all", "code", "art", "music", "video", "writing", "client"] as const).map((discipline) => (
+                <OverlayButton
+                  key={discipline}
+                  active={filter === discipline}
+                  onClick={() => {
+                    audio.playUiClick("toggle");
+                    stopIntro();
+                    setFilter(discipline);
+                  }}
+                  className="px-3 py-1.5 text-[10px]"
+                >
+                  {discipline === "all" ? "All" : formatDisplayLabel(discipline)}
+                </OverlayButton>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-4 right-4 z-20 hidden flex-col items-end gap-3 md:flex">
+          {legendPanelVisible ? (
+            <div
+              data-map-interactive="true"
+              className={cn(
+                "panel-enter w-80 rounded-[24px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.78)] p-4 text-sm leading-7 text-[var(--muted-soft)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+                showLegend
+                  ? "pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0"
+                  : "pointer-events-none opacity-0 translate-y-2 scale-[0.985] blur-[2px]",
+              )}
+            >
+              <div className="font-display text-3xl text-[var(--accent-strong)]">Map Key</div>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <svg width="24" height="24" viewBox="0 0 24 24" className="mt-1 shrink-0">
+                    <circle cx="12" cy="12" r="8" fill="#d8b470" fillOpacity="0.2" />
+                    <circle cx="12" cy="12" r="5" fill="#f4d38d" />
+                  </svg>
+                  <p>Settlements, towns, capitals, and wonders scale with project importance, maturity, and momentum.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <svg width="24" height="24" viewBox="0 0 24 24" className="mt-1 shrink-0">
+                    <path d="M 3 17 C 7 8 16 8 21 17" fill="none" stroke="#9ad5f6" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <p>Rivers, roads, and routes mark shared systems, integrations, and cross-project influence.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <svg width="24" height="24" viewBox="0 0 24 24" className="mt-1 shrink-0">
+                    <rect x="4" y="7" width="16" height="10" rx="3" fill="rgba(244,211,141,0.18)" stroke="#f4d38d" />
+                    <path d="M 7 15 L 7 10 M 11 15 L 11 8 M 15 15 L 15 10" stroke="#f4d38d" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                  <p>Improvements are skill tiles: farms, workshops, harbors, and academies that show what each city learned to grow.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <svg width="24" height="24" viewBox="0 0 24 24" className="mt-1 shrink-0">
+                    <path d="M 5 18 L 12 4 L 19 18 Z" fill="rgba(244,211,141,0.22)" stroke="#f4d38d" />
+                  </svg>
+                  <p>Great Works are landmark achievements. Their names appear on hover to keep the world readable.</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          <div
+            data-map-interactive="true"
+            className="rounded-[24px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.72)] p-3 shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl"
+          >
+            <div className="mb-2 text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Minimap</div>
+            <svg
+              data-map-interactive="true"
+              width="220"
+              height="148"
+              viewBox={`0 0 ${world.width} ${world.height}`}
+              onClick={(event) => {
+                stopIntro();
+                const rect = event.currentTarget.getBoundingClientRect();
+                const x = ((event.clientX - rect.left) / rect.width) * world.width;
+                const y = ((event.clientY - rect.top) / rect.height) * world.height;
+                nudgeTowardsPoint(x, y);
+              }}
+              className="cursor-pointer"
+            >
+              <rect width={world.width} height={world.height} rx={14} fill="#0b121b" />
+              {currentState.routes.map((route) => (
+                <path key={route.id} d={route.path} fill="none" stroke="rgba(212,176,106,0.25)" strokeWidth={8} />
+              ))}
+              {currentState.cities.map((city) => (
+                <circle
+                  key={city.slug}
+                  cx={city.x}
+                  cy={city.y}
+                  r={city.slug === selectedSlug ? 22 : city.level === "wonder" ? 16 : 12}
+                  fill={disciplineTone[city.discipline]}
+                  fillOpacity={city.slug === selectedSlug ? 1 : 0.82}
+                />
+              ))}
+              <rect
+                x={clamp(-camera.x / camera.zoom, 0, world.width)}
+                y={clamp(-camera.y / camera.zoom, 0, world.height)}
+                width={clamp(containerSize.width / camera.zoom, 120, world.width)}
+                height={clamp(containerSize.height / camera.zoom, 120, world.height)}
+                fill="none"
+                stroke="#f4d38d"
+                strokeWidth={10}
+              />
+            </svg>
+          </div>
+        </div>
+
+        {hoveredCity ? (
+          (() => {
+            const city = currentState.cities.find((candidate) => candidate.slug === hoveredCity.slug);
+            if (!city) {
+              return null;
+            }
+
+            return (
+              <div
+                data-map-interactive="true"
+                className="pointer-events-none absolute z-[70] w-80 rounded-[24px] border border-[var(--accent)] bg-[rgba(18,12,9,0.9)] px-4 py-4 shadow-[0_18px_50px_rgba(0,0,0,0.42)]"
+                style={{
+                  left: clamp(hoveredCity.x + 18, 12, containerSize.width - 332),
+                  top: clamp(hoveredCity.y + 18, 12, containerSize.height - 184),
+                }}
+              >
+                <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">
+                  {formatDisplayLabel(city.level)} · {formatDisciplineLabel(city.discipline)}
+                </div>
+                <div className="mt-1 font-display text-3xl text-[var(--parchment)]">{city.title}</div>
+                <div className="mt-2 text-sm leading-7 text-[var(--muted-soft)]">{city.summary}</div>
+                <div className="mt-3 flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">
+                  <span>{city.region}</span>
+                  <span>{city.era}</span>
+                  <span>{formatDisplayLabel(city.terrain)}</span>
+                </div>
+              </div>
+            );
+          })()
+        ) : null}
+
+        {hoveredUnitCard ? (
+          <div
+            data-map-interactive="true"
+            className="pointer-events-none absolute z-[70] w-64 rounded-[22px] border border-[var(--accent)] bg-[rgba(18,12,9,0.92)] px-4 py-4 shadow-[0_18px_50px_rgba(0,0,0,0.42)]"
+            style={{
+              left: clamp(hoveredUnitCard.x + 18, 12, containerSize.width - 268),
+              top: clamp(hoveredUnitCard.y - 84, 12, containerSize.height - 156),
+            }}
+          >
+            <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">
+              Traveler · {formatDisplayLabel(hoveredUnitCard.type)}
+            </div>
+            <div className="mt-2 font-display text-3xl text-[var(--parchment)]">{hoveredUnitCard.label}</div>
+            <div className="mt-2 text-sm leading-7 text-[var(--muted-soft)]">
+              {getTravelerFlavor(hoveredUnitCard.label, hoveredUnitCard.type)}
+            </div>
+          </div>
+        ) : null}
+
+        {leaderPanelVisible ? (
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-0 z-[60] flex p-4",
+              isMobile ? "items-start justify-center pt-24" : "items-center justify-center",
+            )}
+          >
+            <div
+              data-map-interactive="true"
+              className={cn(
+                "panel-enter pointer-events-auto flex flex-col overflow-hidden rounded-[30px] border border-[rgba(244,211,141,0.18)] bg-[rgba(17,12,9,0.9)] shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+                isMobile
+                  ? "w-[min(36rem,calc(100%-1rem))] max-h-[calc(100vh-7rem)]"
+                  : "w-[min(46rem,calc(100%-3rem))] max-h-[calc(100vh-4rem)]",
+                showLeader
+                  ? "opacity-100 translate-y-0 scale-100 blur-0"
+                  : "pointer-events-none opacity-0 -translate-y-2 scale-[0.985] blur-[2px]",
+              )}
+            >
+            <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
+                <div className="flex items-start gap-4">
+                <Image
+                  src={leader.avatar}
+                  alt={leader.name}
+                  width={640}
+                  height={640}
+                  className="h-20 w-20 rounded-[24px] border border-white/10 object-cover"
+                  unoptimized
+                />
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">Leader Screen</div>
+                  <h2 className="mt-2 font-display text-4xl leading-none text-[var(--parchment)]">{leader.name}</h2>
+                  <p className="mt-2 text-sm leading-7 text-[var(--muted-soft)]">{leader.headline}</p>
+                  {leader.currentRole ? (
+                    <p className="mt-2 text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">
+                      Current office: {leader.currentRole}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              <OverlayButton
+                onClick={() => {
+                  audio.playUiClick("close");
+                  setShowLeader(false);
+                }}
+                className="px-3 py-2 text-[10px]"
+              >
+                Close
+              </OverlayButton>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 pb-8">
+            <p className="text-sm leading-7 text-[var(--muted-soft)]">{leader.summary}</p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[20px] border border-white/10 bg-[rgba(255,255,255,0.05)] px-4 py-3">
+                <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Civilization</div>
+                <div className="mt-1 text-sm text-[var(--parchment)]">Builder-Technologist</div>
+              </div>
+              <div className="rounded-[20px] border border-white/10 bg-[rgba(255,255,255,0.05)] px-4 py-3">
+                <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Capital</div>
+                <div className="mt-1 text-sm text-[var(--parchment)]">Robot Future</div>
+              </div>
+              <div className="rounded-[20px] border border-white/10 bg-[rgba(255,255,255,0.05)] px-4 py-3">
+                <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Current Campaign</div>
+                <div className="mt-1 text-sm text-[var(--parchment)]">Agentic AI Systems</div>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Founding Principles</div>
+              {leader.philosophy.map((item) => (
+                <div
+                  key={item}
+                  className="rounded-[20px] border border-white/10 bg-[rgba(255,255,255,0.05)] px-4 py-3 text-sm text-[var(--muted-soft)]"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="space-y-3">
+                <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Civilization Traits</div>
+                {leader.featuredSkills.map((item) => (
+                  <div key={item} className="rounded-[20px] border border-white/10 bg-[rgba(255,255,255,0.05)] px-4 py-3 text-sm text-[var(--muted-soft)]">
+                    {item}
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-3">
+                <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">Historic Milestones</div>
+                {leader.achievements.map((item) => (
+                  <div key={item} className="rounded-[20px] border border-white/10 bg-[rgba(255,255,255,0.05)] px-4 py-3 text-sm text-[var(--muted-soft)]">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              {leader.contactLinks.map((link) => (
+                <a
+                  key={link.url}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] px-4 py-2 text-sm text-[var(--accent-strong)] transition hover:bg-[rgba(244,211,141,0.16)]"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+            </div>
+            </div>
+          </div>
+        ) : null}
+
+        {selectedWorkPanel.present && selectedWorkPanel.retained ? (
+          <div
+            data-map-interactive="true"
+            className={cn(
+              "panel-enter absolute z-30 flex flex-col overflow-hidden rounded-[30px] border border-[rgba(244,211,141,0.18)] bg-[rgba(16,11,9,0.86)] shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-[opacity,transform,filter] duration-240 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+              isMobile
+                ? "bottom-4 left-4 right-4 top-auto max-h-[68vh]"
+                : "bottom-4 right-4 top-28 w-[min(440px,calc(100%-2rem))] lg:right-6 lg:top-24",
+              selectedWork && selectedWorkVisible
+                ? "pointer-events-auto opacity-100 translate-x-0 scale-100 blur-0"
+                : "pointer-events-none opacity-0 translate-x-4 scale-[0.985] blur-[2px]",
+            )}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">City Management View</div>
+                <div className="mt-1 font-display text-3xl leading-none text-[var(--parchment)]">{selectedWorkPanel.retained.title}</div>
+              </div>
+              <OverlayButton onClick={closePanels} className="px-3 py-2 text-[10px]">Close</OverlayButton>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 pb-8">
+              <WorkDetail
+                work={selectedWorkPanel.retained}
+                github={selectedPanelGithub || undefined}
+                cityLevel={selectedPanelCity?.level}
+                mode="panel"
+              />
+            </div>
+          </div>
+        ) : hiddenWorkPanel.present && hiddenWorkPanel.retained ? (
+          (() => {
+            const retainedHiddenWork = hiddenWorkPanel.retained;
+
+            return (
+          <div
+            data-map-interactive="true"
+            className={cn(
+              "panel-enter absolute z-30 rounded-[30px] border border-[rgba(244,211,141,0.18)] bg-[rgba(16,11,9,0.86)] p-6 shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-[opacity,transform,filter] duration-240 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+              isMobile ? "left-4 right-4 top-40" : "right-4 top-28 w-[min(440px,calc(100%-2rem))]",
+              selectedWork && !selectedWorkVisible
+                ? "pointer-events-auto opacity-100 translate-x-0 scale-100 blur-0"
+                : "pointer-events-none opacity-0 translate-x-4 scale-[0.985] blur-[2px]",
+            )}
+          >
+            <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">Not visible in {selectedYear}</div>
+            <h2 className="mt-3 font-display text-4xl text-[var(--parchment)]">{retainedHiddenWork.title}</h2>
+            <p className="mt-3 text-sm leading-8 text-[var(--muted-soft)]">
+              This city has not appeared in the selected era. Jump to its founding year or open the full dossier route directly.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <OverlayButton onClick={() => jumpToWorkYear(retainedHiddenWork)} active>
+                Jump to {retainedHiddenWork.startYear}
+              </OverlayButton>
+              <Link
+                href={`/work/${retainedHiddenWork.slug}`}
+                className="rounded-full border border-white/10 px-4 py-2 text-[11px] uppercase tracking-[0.24em] text-[var(--muted-soft)]"
+              >
+                Open Dossier
+              </Link>
+            </div>
+          </div>
+            );
+          })()
+        ) : commandBriefVisible ? (
+          <div
+            className={cn(
+              "panel-enter absolute right-4 top-28 z-20 hidden max-w-sm rounded-[26px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.66)] px-5 py-4 shadow-[0_18px_45px_rgba(0,0,0,0.26)] backdrop-blur-xl xl:block transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+              !selectedWork && !showLeader && !isTablet && !isShort
+                ? "pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0"
+                : "pointer-events-none opacity-0 translate-y-2 scale-[0.985] blur-[2px]",
+            )}
+          >
+            <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">Command Brief</div>
+            <div className="mt-2 font-display text-3xl text-[var(--parchment)]">Open a city to inspect the work.</div>
+            <p className="mt-2 text-sm leading-7 text-[var(--muted-soft)]">
+              Hover for a quick read, click for the city management dossier, and scrub time to watch the empire grow.
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}

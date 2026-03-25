@@ -1,0 +1,12 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#26180F"/>
+  <path d="M0 462L224 334L432 410L654 242L856 304L1200 178V720H0V462Z" fill="#5D4B36"/>
+  <path d="M316 470H898V286H316V470Z" fill="#D2AF72"/>
+  <path d="M316 286L606 146L898 286" fill="#F0D8A9"/>
+  <path d="M368 338H846" stroke="#755732" stroke-width="10" stroke-linecap="round"/>
+  <path d="M368 398H846" stroke="#755732" stroke-width="10" stroke-linecap="round"/>
+  <path d="M488 286V470" stroke="#755732" stroke-width="10"/>
+  <path d="M722 286V470" stroke="#755732" stroke-width="10"/>
+  <rect x="166" y="556" width="868" height="76" rx="18" fill="#191008" fill-opacity="0.78"/>
+  <text x="210" y="603" fill="#F4E1B7" font-size="40" font-family="Georgia, serif">Studio Ledger</text>
+</svg>

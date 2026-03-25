@@ -1,0 +1,9 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#1E2718"/>
+  <path d="M0 418L238 286L412 362L604 206L774 262L1024 150L1200 250V720H0V418Z" fill="#385338"/>
+  <path d="M1024 150L1120 224L1032 318L944 224L1024 150Z" fill="#F0C17B"/>
+  <path d="M604 206L676 268L604 330L532 268L604 206Z" fill="#D8A55A"/>
+  <path d="M238 286L312 348L238 410L164 348L238 286Z" fill="#B6D4A7"/>
+  <path d="M164 566H1040V632H164V566Z" fill="#16200F" fill-opacity="0.8"/>
+  <text x="204" y="611" fill="#F0E6C5" font-size="40" font-family="Georgia, serif">Northwind Campaign</text>
+</svg>

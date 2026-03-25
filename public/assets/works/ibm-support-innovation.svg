@@ -1,0 +1,13 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#26180F"/>
+  <path d="M0 464L222 338L430 414L652 244L858 308L1200 182V720H0V464Z" fill="#5D4B36"/>
+  <path d="M314 468H900V288H314V468Z" fill="#D2AF72"/>
+  <path d="M314 288L606 146L900 288" fill="#F0D8A9"/>
+  <path d="M368 340H846" stroke="#755732" stroke-width="10" stroke-linecap="round"/>
+  <path d="M368 400H846" stroke="#755732" stroke-width="10" stroke-linecap="round"/>
+  <path d="M490 288V468" stroke="#755732" stroke-width="10"/>
+  <path d="M724 288V468" stroke="#755732" stroke-width="10"/>
+  <path d="M236 548L964 548" stroke="#F4E1B7" stroke-width="10" stroke-dasharray="16 14"/>
+  <rect x="146" y="556" width="908" height="76" rx="18" fill="#191008" fill-opacity="0.78"/>
+  <text x="184" y="603" fill="#F4E1B7" font-size="36" font-family="Georgia, serif">IBM Support Innovation</text>
+</svg>

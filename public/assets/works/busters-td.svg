@@ -1,0 +1,13 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#1E2718"/>
+  <path d="M0 432L232 288L406 364L602 214L780 274L1020 146L1200 252V720H0V432Z" fill="#385338"/>
+  <path d="M1020 146L1118 222L1028 322L934 222L1020 146Z" fill="#F0C17B"/>
+  <path d="M602 214L676 286L602 358L528 286L602 214Z" fill="#D8A55A"/>
+  <path d="M232 288L306 360L232 432L158 360L232 288Z" fill="#B6D4A7"/>
+  <path d="M560 610C650 534 730 492 834 474C924 458 1000 470 1092 512" stroke="#F5D08C" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="790" cy="494" r="16" fill="#F5D08C"/>
+  <circle cx="900" cy="474" r="16" fill="#F5D08C"/>
+  <circle cx="1014" cy="492" r="16" fill="#F5D08C"/>
+  <rect x="170" y="556" width="860" height="74" rx="18" fill="#16200F" fill-opacity="0.8"/>
+  <text x="210" y="602" fill="#F0E6C5" font-size="40" font-family="Georgia, serif">Buster's TD</text>
+</svg>

@@ -1,0 +1,9 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#142A30"/>
+  <path d="M0 468C154 408 308 408 436 444C564 480 700 550 862 516C1024 482 1124 350 1200 286V720H0V468Z" fill="#2A6A63"/>
+  <rect x="282" y="146" width="636" height="360" rx="28" fill="#0D1920" stroke="#A6E0C2" stroke-width="6"/>
+  <rect x="346" y="208" width="510" height="238" rx="18" fill="#A2DCC1"/>
+  <path d="M555 256L695 327L555 398V256Z" fill="#15343C"/>
+  <path d="M148 566H1044V632H148V566Z" fill="#17252A" fill-opacity="0.8"/>
+  <text x="198" y="611" fill="#DDF4E5" font-size="40" font-family="Georgia, serif">Meridian Film</text>
+</svg>

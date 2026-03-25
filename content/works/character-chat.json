@@ -1,0 +1,83 @@
+{
+  "slug": "character-chat",
+  "title": "Character Chat",
+  "discipline": "code",
+  "summary": "An intuitive ChatGPT interface for talking with fictional and historical characters.",
+  "description": [
+    "Character Chat appears in Phil's resume as one of his early OpenAI-driven web products. It focuses less on infrastructure than on interaction design, prompt experience, and making AI chat feel immediately playful and understandable.",
+    "Even without a current public repo, it is an important city in the portfolio because it shows Phil's pattern of shipping user-facing AI experiences early."
+  ],
+  "importance": 76,
+  "status": "paused",
+  "era": "Atomic",
+  "startYear": 2023,
+  "tags": ["openai", "chat", "ux", "ai"],
+  "map": {
+    "x": 260,
+    "y": 560,
+    "terrain": "coast",
+    "region": "Southern Shoals",
+    "bannerTone": "#9ad9b9"
+  },
+  "links": [],
+  "media": [
+    {
+      "kind": "image",
+      "src": "/assets/works/character-chat-shot.png",
+      "alt": "A reconstructed screenshot representing the Character Chat interface.",
+      "caption": "An archival-style reconstruction of the playful character-chat experience."
+    },
+    {
+      "kind": "image",
+      "src": "/assets/works/character-chat.svg",
+      "alt": "A coastal observatory city representing Character Chat.",
+      "caption": "A harbor city for persona design, chat UX, and user-facing AI play."
+    }
+  ],
+  "greatWorks": [
+    {
+      "title": "Persona Harbor",
+      "summary": "A fast, approachable interface for talking with fictional and historical characters.",
+      "xOffset": 86,
+      "yOffset": -58,
+      "unlockYear": 2023
+    }
+  ],
+  "relationships": [
+    { "target": "popcurrent", "type": "integration", "label": "Shared OpenAI experimentation" },
+    { "target": "robot-future", "type": "trade", "label": "Public AI ecosystem" }
+  ],
+  "highlights": [
+    "Turned ChatGPT into a quicker, more approachable character-based experience.",
+    "Showed early product instinct around consumer-facing AI UX.",
+    "Balanced novelty with a simple interaction model."
+  ],
+  "productionQueue": [
+    "Revisit persona systems with newer model capabilities.",
+    "Rebuild the interaction layer with better memory and controls."
+  ],
+  "techTree": ["OpenAI APIs", "Chat UX", "Prompt design", "Web apps"],
+  "diplomacy": ["Curious users", "AI tinkerers", "Prompt explorers"],
+  "tradeRoutes": ["Character personas", "Prompt patterns", "Conversation flows"],
+  "wonders": ["Playful AI interface design"],
+  "metrics": {
+    "prestige": 7,
+    "activity": 6,
+    "stability": 5,
+    "reach": 6
+  },
+  "code": {
+    "role": "Founder and primary engineer",
+    "stack": ["JavaScript", "OpenAI APIs", "Web UI"],
+    "features": [
+      "Character-based chat experiences",
+      "Accessible AI interface design",
+      "Fast persona switching"
+    ],
+    "integrations": ["OpenAI"],
+    "architectureNotes": [
+      "Designed as a user-facing AI product rather than a backend-first experiment.",
+      "Prioritized approachability and novelty."
+    ]
+  }
+}

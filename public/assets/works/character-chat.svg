@@ -1,0 +1,12 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#132739"/>
+  <path d="M0 416C138 438 228 522 372 514C516 506 640 382 782 380C924 378 1038 452 1200 534V720H0V416Z" fill="#1F5472"/>
+  <path d="M0 534C140 506 284 580 428 592C572 604 684 552 816 532C948 512 1058 540 1200 616V720H0V534Z" fill="#4BA0B5"/>
+  <rect x="282" y="158" width="638" height="316" rx="34" fill="#DFF3F8"/>
+  <path d="M402 244H806" stroke="#4A7B91" stroke-width="10" stroke-linecap="round"/>
+  <path d="M402 316H748" stroke="#4A7B91" stroke-width="10" stroke-linecap="round"/>
+  <path d="M402 388H694" stroke="#4A7B91" stroke-width="10" stroke-linecap="round"/>
+  <path d="M466 474L540 548L604 474" stroke="#DFF3F8" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="164" y="556" width="872" height="76" rx="18" fill="#13202B" fill-opacity="0.8"/>
+  <text x="208" y="603" fill="#EFF5F7" font-size="38" font-family="Georgia, serif">Character Chat</text>
+</svg>
