@@ -22,6 +22,13 @@ import {
   useRetainedPresence,
   useWorldAudio,
 } from "@/components/world/world-explorer-support";
+import {
+  clampCameraToViewport,
+  localPointToViewportPoint,
+  localPointToWorldPoint,
+  worldPointToLocalPoint,
+  zoomCameraAtPoint,
+} from "@/components/world/world-camera";
 import type { WorldRenderModel } from "@/lib/content/derive";
 import type { GithubCache, LeaderProfile, SiteConfig, Work } from "@/lib/content/schema";
 import { cn, formatDisciplineLabel, formatDisplayLabel } from "@/lib/utils";
@@ -286,6 +293,7 @@ export function WorldExplorer({
     selectedWorkPanel.retained?.code?.repo &&
     github.repos[`${selectedWorkPanel.retained.code.repo.owner}/${selectedWorkPanel.retained.code.repo.name}`];
   const introProgress = introSequence.length > 0 ? (introIndex + 1) / introSequence.length : 0;
+  const viewportSize = useMemo(() => ({ width: world.width, height: world.height }), [world.height, world.width]);
   const terrainAtPoint = useCallback((x: number, y: number) => {
     return world.hexes.reduce<{ terrain: (typeof world.hexes)[number]["terrain"]; distance: number }>(
       (closest, hex) => {
@@ -338,18 +346,7 @@ export function WorldExplorer({
   );
 
   function clampCameraToWorld(next: CameraState) {
-    const marginX = Math.min(120, containerSize.width * 0.08);
-    const marginY = Math.min(88, containerSize.height * 0.08);
-    const minX = containerSize.width - world.width * next.zoom - marginX;
-    const maxX = marginX;
-    const minY = containerSize.height - world.height * next.zoom - marginY;
-    const maxY = marginY;
-
-    return {
-      ...next,
-      x: clamp(next.x, Math.min(minX, maxX), Math.max(minX, maxX)),
-      y: clamp(next.y, Math.min(minY, maxY), Math.max(minY, maxY)),
-    };
+    return clampCameraToViewport(next, viewportSize, { width: world.width, height: world.height });
   }
 
   function setCameraTarget(
@@ -364,23 +361,13 @@ export function WorldExplorer({
 
   function adjustZoom(
     delta: number,
-    anchorX = containerSize.width * 0.5,
-    anchorY = containerSize.height * 0.5,
+    anchorX = viewportSize.width * 0.5,
+    anchorY = viewportSize.height * 0.5,
     immediate = false,
   ) {
-    const apply = (current: CameraState) => {
-      const zoomFactor = Math.exp(delta);
-      const nextZoom = clamp(current.zoom * zoomFactor, 0.58, 1.52);
-      const worldX = (anchorX - current.x) / current.zoom;
-      const worldY = (anchorY - current.y) / current.zoom;
-      return {
-        zoom: nextZoom,
-        x: anchorX - worldX * nextZoom,
-        y: anchorY - worldY * nextZoom,
-      };
-    };
-
-    const next = clampCameraToWorld(apply(cameraTargetRef.current));
+    const next = clampCameraToWorld(
+      zoomCameraAtPoint(cameraTargetRef.current, delta, { x: anchorX, y: anchorY }),
+    );
     cameraTargetRef.current = next;
     if (immediate) {
       setCamera(next);
@@ -443,8 +430,8 @@ export function WorldExplorer({
 
   function nudgeTowardsPoint(x: number, y: number) {
     const current = cameraTargetRef.current;
-    const viewportWidth = world.width;
-    const viewportHeight = world.height;
+    const viewportWidth = viewportSize.width;
+    const viewportHeight = viewportSize.height;
     const desiredX = viewportWidth * (isTablet ? 0.52 : 0.58) - x * current.zoom;
     const desiredY = viewportHeight * 0.54 - y * current.zoom;
     const dx = clamp(desiredX - current.x, -120, 120);
@@ -460,8 +447,8 @@ export function WorldExplorer({
   function focusPointForIntro(x: number, y: number) {
     const current = cameraTargetRef.current;
     const introZoom = clamp(Math.max(current.zoom, isMobile ? 0.96 : 1.02), 0.72, 1.18);
-    const viewportWidth = world.width;
-    const viewportHeight = world.height;
+    const viewportWidth = viewportSize.width;
+    const viewportHeight = viewportSize.height;
     const desiredX = viewportWidth * 0.5 - x * introZoom;
     const desiredY = viewportHeight * (isMobile ? 0.58 : 0.56) - y * introZoom;
 
@@ -485,9 +472,10 @@ export function WorldExplorer({
   }
 
   function worldPointToScreen(x: number, y: number) {
+    const localPoint = worldPointToLocalPoint({ x, y }, camera, viewportSize, containerSize);
     return {
-      x: clamp(camera.x + x * camera.zoom, 12, containerSize.width - 268),
-      y: clamp(camera.y + y * camera.zoom, 12, containerSize.height - 156),
+      x: clamp(localPoint.x, 12, containerSize.width - 268),
+      y: clamp(localPoint.y, 12, containerSize.height - 156),
     };
   }
 
@@ -495,12 +483,14 @@ export function WorldExplorer({
     const rect = containerRef.current?.getBoundingClientRect();
     const localX = clientX - (rect?.left ?? 0);
     const localY = clientY - (rect?.top ?? 0);
-    return {
-      x: clamp((localX - camera.x) / camera.zoom, 0, world.width),
-      y: clamp((localY - camera.y) / camera.zoom, 0, world.height),
-      localX,
-      localY,
-    };
+    const worldPoint = localPointToWorldPoint(
+      { x: localX, y: localY },
+      camera,
+      viewportSize,
+      containerSize,
+      { width: world.width, height: world.height },
+    );
+    return { x: worldPoint.x, y: worldPoint.y, localX, localY };
   }
 
   function clearUnitHover(unitId?: string | null) {
@@ -647,15 +637,18 @@ export function WorldExplorer({
           if (dragRef.current) {
             const dx = event.clientX - dragRef.current.x;
             const dy = event.clientY - dragRef.current.y;
+            const delta = localPointToViewportPoint(dx, dy, viewportSize, containerSize);
             dragDistanceRef.current += Math.abs(dx) + Math.abs(dy);
             if (dragDistanceRef.current > 6) {
               suppressCityClickRef.current = true;
             }
-            setCameraTarget((current) => ({
-              ...current,
-              x: current.x + dx,
-              y: current.y + dy,
-            }));
+            const next = clampCameraToWorld({
+              ...cameraTargetRef.current,
+              x: cameraTargetRef.current.x + delta.x,
+              y: cameraTargetRef.current.y + delta.y,
+            });
+            cameraTargetRef.current = next;
+            setCamera(next);
             dragRef.current = {
               x: event.clientX,
               y: event.clientY,
@@ -709,10 +702,15 @@ export function WorldExplorer({
           event.preventDefault();
           stopIntro();
           const rect = event.currentTarget.getBoundingClientRect();
-          const anchorX = event.clientX - rect.left;
-          const anchorY = event.clientY - rect.top;
-          const normalizedDelta = clamp(-event.deltaY * 0.0011, -0.16, 0.16);
-          adjustZoom(normalizedDelta, anchorX, anchorY, true);
+          const anchor = localPointToViewportPoint(
+            event.clientX - rect.left,
+            event.clientY - rect.top,
+            viewportSize,
+            containerSize,
+          );
+          const deltaModeScale = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 18 : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? 72 : 1;
+          const normalizedDelta = clamp((-event.deltaY * deltaModeScale) * 0.00135, -0.22, 0.22);
+          adjustZoom(normalizedDelta, anchor.x, anchor.y, true);
         }}
       >
         <div className="world-atmosphere pointer-events-none absolute inset-0" />

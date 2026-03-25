@@ -74,6 +74,22 @@ async function clickMapCity(page: Page, label: string) {
   }, label);
 }
 
+async function getCityCenter(page: Page, label: string) {
+  const city = page.locator(`circle[aria-label="${label}"]`).first();
+  await expect(city).toBeVisible();
+  const box = await city.boundingBox();
+  if (!box) {
+    throw new Error(`City target has no bounding box: ${label}`);
+  }
+
+  return {
+    x: box.x + box.width / 2,
+    y: box.y + box.height / 2,
+    width: box.width,
+    height: box.height,
+  };
+}
+
 async function setTimelineIndex(page: Page, index: number) {
   const slider = page.getByLabel("Timeline slider");
   const box = await slider.boundingBox();
@@ -249,6 +265,21 @@ test.describe("world map interactions", () => {
     await page.getByRole("button", { name: "Traveler gstack" }).focus();
     await expect(page.getByText("Traveler · trader")).toBeVisible();
     await expect(page.getByText(/Arrives with a clipboard/i)).toBeVisible();
+  });
+
+  test("wheel zoom stays anchored to the cursor and feels immediate", async ({ page }) => {
+    await openWorldMap(page);
+
+    await skipIntro(page);
+    const before = await getCityCenter(page, "Open Robot Future");
+    await page.mouse.move(before.x, before.y);
+    await page.mouse.wheel(0, -720);
+    await page.waitForTimeout(120);
+    const after = await getCityCenter(page, "Open Robot Future");
+
+    expect(Math.abs(after.x - before.x)).toBeLessThan(10);
+    expect(Math.abs(after.y - before.y)).toBeLessThan(10);
+    expect(after.width).toBeGreaterThan(before.width * 1.08);
   });
 
   test("mobile layout keeps the map usable and primary controls reachable", async ({
