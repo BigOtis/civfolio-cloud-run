@@ -158,6 +158,7 @@ export function WorldExplorer({
     x: number;
     y: number;
   } | null>(null);
+  const [lockedHoverUnit, setLockedHoverUnit] = useState<{ id: string; x: number; y: number } | null>(null);
   const [introActive, setIntroActive] = useState(site.scene.introEnabled);
   const [introIndex, setIntroIndex] = useState(0);
   const [showLeader, setShowLeader] = useState(false);
@@ -323,10 +324,13 @@ export function WorldExplorer({
 
           const frozenTime = hoveredUnitId === unit.id ? frozenUnitTimeRef.current : sceneClock;
           const position = getRoutePoint(routeCities, unit.speed, frozenTime);
+          const hoverLocked = lockedHoverUnit?.id === unit.id ? lockedHoverUnit : null;
           const parked = parkedUnits[unit.id] && parkedUnits[unit.id].until > sceneClock ? parkedUnits[unit.id] : null;
           const dragged = draggedUnit?.id === unit.id ? draggedUnit : null;
           const finalPosition = dragged
             ? { x: dragged.x, y: dragged.y, angle: position.angle }
+            : hoverLocked
+              ? { x: hoverLocked.x, y: hoverLocked.y, angle: position.angle }
             : parked
               ? { x: parked.x, y: parked.y, angle: position.angle }
               : position;
@@ -342,7 +346,7 @@ export function WorldExplorer({
           };
         })
         .filter((unit): unit is NonNullable<typeof unit> => Boolean(unit)),
-    [currentCityMap, draggedUnit, hoveredUnitId, introActive, parkedUnits, sceneClock, site.scene.toolUnits, terrainAtPoint],
+    [currentCityMap, draggedUnit, hoveredUnitId, introActive, lockedHoverUnit, parkedUnits, sceneClock, site.scene.toolUnits, terrainAtPoint],
   );
 
   function clampCameraToWorld(next: CameraState) {
@@ -502,11 +506,13 @@ export function WorldExplorer({
     if (!unitId) {
       setHoveredUnitId(null);
       setHoveredUnitCard(null);
+      setLockedHoverUnit(null);
       return;
     }
 
     setHoveredUnitId((current) => (current === unitId ? null : current));
     setHoveredUnitCard((current) => (current?.id === unitId ? null : current));
+    setLockedHoverUnit((current) => (current?.id === unitId ? null : current));
   }
 
   function scheduleUnitHoverRelease(unitId?: string | null) {
@@ -516,7 +522,43 @@ export function WorldExplorer({
 
     unitHoverReleaseRef.current = window.setTimeout(() => {
       clearUnitHover(unitId);
-    }, 920);
+    }, 3200);
+  }
+
+  function activateUnitHover(unit: {
+    id: string;
+    label: string;
+    type: string;
+    worldX: number;
+    worldY: number;
+  }, clientX?: number, clientY?: number) {
+    if (unitHoverReleaseRef.current) {
+      window.clearTimeout(unitHoverReleaseRef.current);
+      unitHoverReleaseRef.current = null;
+    }
+    frozenUnitTimeRef.current = sceneClock;
+    if (hoveredUnitId !== unit.id) {
+      audio.playUiClick("troop");
+    }
+
+    const next =
+      typeof clientX === "number" && typeof clientY === "number"
+        ? screenPointToWorld(clientX, clientY)
+        : null;
+
+    setHoveredUnitId(unit.id);
+    setLockedHoverUnit({ id: unit.id, x: unit.worldX, y: unit.worldY });
+    setHoveredUnitCard({
+      id: unit.id,
+      label: unit.label,
+      type: unit.type,
+      ...(next
+        ? {
+            x: clamp(next.localX + 12, 12, containerSize.width - 268),
+            y: clamp(next.localY - 12, 12, containerSize.height - 156),
+          }
+        : worldPointToScreen(unit.worldX, unit.worldY)),
+    });
   }
 
   function nearestHexCenter(x: number, y: number) {
@@ -529,6 +571,37 @@ export function WorldExplorer({
         return closest;
       },
       { x, y, distance: Number.POSITIVE_INFINITY },
+    );
+  }
+
+  function findUnitNearLocalPoint(localX: number, localY: number) {
+    return unitRenderData.reduce<null | (typeof unitRenderData)[number]>(
+      (closest, unit) => {
+        const point = worldPointToLocalPoint(
+          { x: unit.worldX, y: unit.worldY },
+          camera,
+          viewportSize,
+          containerSize,
+        );
+        const distance = Math.hypot(point.x - localX, point.y - localY);
+
+        if (distance > 56) {
+          return closest;
+        }
+
+        if (!closest) {
+          return unit;
+        }
+
+        const closestPoint = worldPointToLocalPoint(
+          { x: closest.worldX, y: closest.worldY },
+          camera,
+          viewportSize,
+          containerSize,
+        );
+        return distance < Math.hypot(closestPoint.x - localX, closestPoint.y - localY) ? unit : closest;
+      },
+      null,
     );
   }
 
@@ -654,6 +727,48 @@ export function WorldExplorer({
               y: event.clientY,
               pointerId: dragRef.current.pointerId,
             };
+            return;
+          }
+
+          if (unitDragRef.current || isInteractiveMapTarget(event.target)) {
+            return;
+          }
+
+          const rect = event.currentTarget.getBoundingClientRect();
+          const localX = event.clientX - rect.left;
+          const localY = event.clientY - rect.top;
+
+          if (hoveredUnitId && lockedHoverUnit?.id === hoveredUnitId) {
+            const lockedPoint = worldPointToLocalPoint(
+              { x: lockedHoverUnit.x, y: lockedHoverUnit.y },
+              camera,
+              viewportSize,
+              containerSize,
+            );
+            if (Math.hypot(lockedPoint.x - localX, lockedPoint.y - localY) <= 92) {
+              if (unitHoverReleaseRef.current) {
+                window.clearTimeout(unitHoverReleaseRef.current);
+                unitHoverReleaseRef.current = null;
+              }
+              setHoveredUnitCard((current) =>
+                current?.id === hoveredUnitId
+                  ? {
+                      ...current,
+                      x: clamp(localX + 12, 12, containerSize.width - 268),
+                      y: clamp(localY - 12, 12, containerSize.height - 156),
+                    }
+                  : current,
+              );
+              return;
+            }
+          }
+
+          const nearestUnit = findUnitNearLocalPoint(localX, localY);
+
+          if (nearestUnit) {
+            activateUnitHover(nearestUnit, event.clientX, event.clientY);
+          } else if (hoveredUnitId) {
+            scheduleUnitHoverRelease(hoveredUnitId);
           }
         }}
         onPointerDown={(event) => {
@@ -1069,17 +1184,18 @@ export function WorldExplorer({
                 <g
                   key={unit.id}
                   transform={`translate(${unit.worldX} ${unit.worldY})`}
-                  opacity={active ? 1 : 0.36}
+                  opacity={active ? 1 : 0.28}
                   style={{ transition: "opacity 180ms ease-out, transform 180ms ease-out, filter 180ms ease-out" }}
-                  filter={active ? "url(#city-drop)" : undefined}
+                  filter={active ? "url(#city-outer-glow)" : undefined}
                 >
                   <circle
-                    r={34}
+                    r={48}
                     role="button"
                     tabIndex={0}
                     data-map-interactive="true"
                     aria-label={`Traveler ${unit.label}`}
-                    fill="transparent"
+                    fill="rgba(255,255,255,0.001)"
+                    pointerEvents="all"
                     className="cursor-pointer outline-none"
                     onPointerDown={(event) => {
                       event.preventDefault();
@@ -1105,26 +1221,37 @@ export function WorldExplorer({
                         return next;
                       });
                       setDraggedUnit({ id: unit.id, x: unit.worldX, y: unit.worldY });
-                      setHoveredUnitId(unit.id);
-                      setHoveredUnitCard({
-                        id: unit.id,
-                        label: unit.label,
-                        type: unit.type,
-                        ...worldPointToScreen(unit.worldX, unit.worldY),
-                      });
+                      activateUnitHover(unit, event.clientX, event.clientY);
                     }}
                     onPointerMove={(event) => {
-                      if (unitDragRef.current?.id !== unit.id || unitDragRef.current.pointerId !== event.pointerId) {
+                      if (unitDragRef.current?.id === unit.id && unitDragRef.current.pointerId === event.pointerId) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const next = screenPointToWorld(event.clientX, event.clientY);
+                        setDraggedUnit({
+                          id: unit.id,
+                          x: next.x + unitDragRef.current.offsetX,
+                          y: next.y + unitDragRef.current.offsetY,
+                        });
+                        setHoveredUnitCard((current) =>
+                          current?.id === unit.id
+                            ? {
+                                ...current,
+                                x: clamp(next.localX + 12, 12, containerSize.width - 268),
+                                y: clamp(next.localY - 12, 12, containerSize.height - 156),
+                              }
+                            : current,
+                        );
                         return;
                       }
-                      event.preventDefault();
-                      event.stopPropagation();
+                      if (draggedUnit?.id === unit.id) {
+                        return;
+                      }
+                      if (unitHoverReleaseRef.current) {
+                        window.clearTimeout(unitHoverReleaseRef.current);
+                        unitHoverReleaseRef.current = null;
+                      }
                       const next = screenPointToWorld(event.clientX, event.clientY);
-                      setDraggedUnit({
-                        id: unit.id,
-                        x: next.x + unitDragRef.current.offsetX,
-                        y: next.y + unitDragRef.current.offsetY,
-                      });
                       setHoveredUnitCard((current) =>
                         current?.id === unit.id
                           ? {
@@ -1150,13 +1277,7 @@ export function WorldExplorer({
                           ...current,
                           [unit.id]: { x: snapped.x, y: snapped.y, until: sceneClock + 15000 },
                         }));
-                        setHoveredUnitId(unit.id);
-                        setHoveredUnitCard({
-                          id: unit.id,
-                          label: unit.label,
-                          type: unit.type,
-                          ...worldPointToScreen(snapped.x, snapped.y),
-                        });
+                        activateUnitHover({ ...unit, worldX: snapped.x, worldY: snapped.y });
                         scheduleUnitHoverRelease(unit.id);
                       }
                     }}
@@ -1171,28 +1292,20 @@ export function WorldExplorer({
                       setDraggedUnit(null);
                       scheduleUnitHoverRelease(unit.id);
                     }}
+                    onPointerEnter={(event) => {
+                      if (draggedUnit?.id === unit.id) {
+                        return;
+                      }
+                      activateUnitHover(unit, event.clientX, event.clientY);
+                    }}
                     onMouseEnter={(event) => {
                       if (draggedUnit?.id === unit.id) {
                         return;
                       }
-                      if (unitHoverReleaseRef.current) {
-                        window.clearTimeout(unitHoverReleaseRef.current);
-                        unitHoverReleaseRef.current = null;
-                      }
-                      frozenUnitTimeRef.current = sceneClock;
-                      if (hoveredUnitId !== unit.id) {
-                        audio.playUiClick("troop");
-                      }
-                      const next = screenPointToWorld(event.clientX, event.clientY);
-                      setHoveredUnitId(unit.id);
-                      setHoveredUnitCard({
-                        id: unit.id,
-                        label: unit.label,
-                        type: unit.type,
-                        x: clamp(next.localX + 12, 12, containerSize.width - 268),
-                        y: clamp(next.localY - 12, 12, containerSize.height - 156),
-                      });
+                      activateUnitHover(unit, event.clientX, event.clientY);
                     }}
+                    onPointerLeave={() => scheduleUnitHoverRelease(unit.id)}
+                    onMouseLeave={() => scheduleUnitHoverRelease(unit.id)}
                     onMouseMove={(event) => {
                       if (draggedUnit?.id === unit.id) {
                         return;
@@ -1212,21 +1325,8 @@ export function WorldExplorer({
                           : current,
                       );
                     }}
-                    onMouseLeave={() => scheduleUnitHoverRelease(unit.id)}
                     onFocus={() => {
-                      if (unitHoverReleaseRef.current) {
-                        window.clearTimeout(unitHoverReleaseRef.current);
-                        unitHoverReleaseRef.current = null;
-                      }
-                      frozenUnitTimeRef.current = sceneClock;
-                      audio.playUiClick("troop");
-                      setHoveredUnitId(unit.id);
-                      setHoveredUnitCard({
-                        id: unit.id,
-                        label: unit.label,
-                        type: unit.type,
-                        ...worldPointToScreen(unit.worldX, unit.worldY),
-                      });
+                      activateUnitHover(unit);
                     }}
                     onBlur={() => scheduleUnitHoverRelease(unit.id)}
                     onClick={(event) => {

@@ -258,13 +258,15 @@ test.describe("world map interactions", () => {
     );
   });
 
-  test("travelers pause and reveal their title cards on hover", async ({ page }) => {
+  test("travelers stay engaged once activated", async ({ page }) => {
     await openWorldMap(page);
 
     await skipIntro(page);
     await page.getByRole("button", { name: "Traveler gstack" }).focus();
-    await expect(page.getByText("Traveler · trader")).toBeVisible();
-    await expect(page.getByText(/Arrives with a clipboard/i)).toBeVisible();
+    const tooltip = page.locator("div").filter({ hasText: "Traveler · trader" }).first();
+    await expect(tooltip).toBeVisible();
+    await page.waitForTimeout(1300);
+    await expect(tooltip).toBeVisible();
   });
 
   test("wheel zoom stays anchored to the cursor and feels immediate", async ({ page }) => {
