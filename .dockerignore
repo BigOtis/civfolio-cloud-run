@@ -1,0 +1,10 @@
+.git
+.github
+.gstack
+.next
+node_modules
+test-results
+tests
+tmp
+out
+npm-debug.log*
