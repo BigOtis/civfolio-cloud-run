@@ -13,8 +13,8 @@
   "startYear": 2023,
   "tags": ["openai", "chat", "ux", "ai"],
   "map": {
-    "x": 260,
-    "y": 560,
+    "x": 170,
+    "y": 610,
     "terrain": "coast",
     "region": "Southern Shoals",
     "bannerTone": "#9ad9b9"

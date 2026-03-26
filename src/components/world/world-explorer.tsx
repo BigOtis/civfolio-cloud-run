@@ -15,7 +15,6 @@ import {
   ImprovementTile,
   isInteractiveMapTarget,
   OverlayButton,
-  type ParkedUnitState,
   StatChip,
   ToolUnitSprite,
   usePresence,
@@ -121,18 +120,13 @@ export function WorldExplorer({
   const searchParams = useSearchParams();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
-  const unitDragRef = useRef<{ id: string; pointerId: number; offsetX: number; offsetY: number } | null>(null);
   const dragDistanceRef = useRef(0);
   const suppressCityClickRef = useRef(false);
   const cameraTargetRef = useRef<CameraState>(initialCamera);
   const introCancelledRef = useRef(false);
   const introTimeoutRef = useRef<number | null>(null);
   const introCueKeyRef = useRef<string | null>(null);
-  const unitHoverReleaseRef = useRef<number | null>(null);
   const selectionSourceRef = useRef<"map" | "route">("route");
-  const frozenUnitTimeRef = useRef(0);
-  const [parkedUnits, setParkedUnits] = useState<Record<string, ParkedUnitState>>({});
-  const [draggedUnit, setDraggedUnit] = useState<{ id: string; x: number; y: number } | null>(null);
   const [selectedYear, setSelectedYear] = useState(world.years[world.years.length - 1]);
   const [filter, setFilter] = useState<Work["discipline"] | "all">("all");
   const [camera, setCamera] = useState<CameraState>(initialCamera);
@@ -144,15 +138,15 @@ export function WorldExplorer({
     y: number;
   } | null>(null);
   const [hoveredGreatWork, setHoveredGreatWork] = useState<string | null>(null);
-  const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
-  const [hoveredUnitCard, setHoveredUnitCard] = useState<{
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [selectedUnitCard, setSelectedUnitCard] = useState<{
     id: string;
     label: string;
     type: string;
     x: number;
     y: number;
   } | null>(null);
-  const [lockedHoverUnit, setLockedHoverUnit] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [selectedUnitLock, setSelectedUnitLock] = useState<{ id: string; x: number; y: number } | null>(null);
   const [introActive, setIntroActive] = useState(site.scene.introEnabled);
   const [introIndex, setIntroIndex] = useState(0);
   const [showLeader, setShowLeader] = useState(false);
@@ -217,32 +211,13 @@ export function WorldExplorer({
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      const now = performance.now();
-
       if (document.visibilityState === "visible") {
-        setSceneClock(now);
+        setSceneClock(performance.now());
       }
-
-      setParkedUnits((current) => {
-        let changed = false;
-        const next = Object.fromEntries(
-          Object.entries(current).filter(([, parked]) => {
-            const keep = parked.until > now;
-            if (!keep) {
-              changed = true;
-            }
-            return keep;
-          }),
-        );
-        return changed ? next : current;
-      });
     }, 120);
 
     return () => {
       window.clearInterval(interval);
-      if (unitHoverReleaseRef.current) {
-        window.clearTimeout(unitHoverReleaseRef.current);
-      }
     };
   }, []);
 
@@ -331,18 +306,11 @@ export function WorldExplorer({
             return null;
           }
 
-          const frozenTime = hoveredUnitId === unit.id ? frozenUnitTimeRef.current : sceneClock;
-          const position = getRoutePoint(routeCities, unit.speed, frozenTime);
-          const hoverLocked = lockedHoverUnit?.id === unit.id ? lockedHoverUnit : null;
-          const parked = parkedUnits[unit.id] && parkedUnits[unit.id].until > sceneClock ? parkedUnits[unit.id] : null;
-          const dragged = draggedUnit?.id === unit.id ? draggedUnit : null;
-          const finalPosition = dragged
-            ? { x: dragged.x, y: dragged.y, angle: position.angle }
-            : hoverLocked
-              ? { x: hoverLocked.x, y: hoverLocked.y, angle: position.angle }
-            : parked
-              ? { x: parked.x, y: parked.y, angle: position.angle }
-              : position;
+          const position = getRoutePoint(routeCities, unit.speed, sceneClock);
+          const locked = selectedUnitLock?.id === unit.id ? selectedUnitLock : null;
+          const finalPosition = locked
+            ? { x: locked.x, y: locked.y, angle: position.angle }
+            : position;
 
           return {
             ...unit,
@@ -350,12 +318,10 @@ export function WorldExplorer({
             worldY: finalPosition.y,
             angle: finalPosition.angle,
             terrain: terrainAtPoint(finalPosition.x, finalPosition.y),
-            parked: Boolean(parked),
-            dragged: Boolean(dragged),
           };
         })
         .filter((unit): unit is NonNullable<typeof unit> => Boolean(unit)),
-    [currentCityMap, draggedUnit, hoveredUnitId, introActive, lockedHoverUnit, parkedUnits, sceneClock, site.scene.toolUnits, terrainAtPoint],
+    [currentCityMap, introActive, sceneClock, selectedUnitLock, site.scene.toolUnits, terrainAtPoint],
   );
 
   function clampCameraToWorld(next: CameraState) {
@@ -438,6 +404,7 @@ export function WorldExplorer({
   function closePanels() {
     audio.playUiClick("close");
     setShowLeader(false);
+    clearSelectedUnit();
     updateWorkInRoute();
   }
 
@@ -506,47 +473,27 @@ export function WorldExplorer({
     return { x: worldPoint.x, y: worldPoint.y, localX, localY };
   }
 
-  function clearUnitHover(unitId?: string | null) {
-    if (unitHoverReleaseRef.current) {
-      window.clearTimeout(unitHoverReleaseRef.current);
-      unitHoverReleaseRef.current = null;
-    }
-
+  function clearSelectedUnit(unitId?: string | null) {
     if (!unitId) {
-      setHoveredUnitId(null);
-      setHoveredUnitCard(null);
-      setLockedHoverUnit(null);
+      setSelectedUnitId(null);
+      setSelectedUnitCard(null);
+      setSelectedUnitLock(null);
       return;
     }
 
-    setHoveredUnitId((current) => (current === unitId ? null : current));
-    setHoveredUnitCard((current) => (current?.id === unitId ? null : current));
-    setLockedHoverUnit((current) => (current?.id === unitId ? null : current));
+    setSelectedUnitId((current) => (current === unitId ? null : current));
+    setSelectedUnitCard((current) => (current?.id === unitId ? null : current));
+    setSelectedUnitLock((current) => (current?.id === unitId ? null : current));
   }
 
-  function scheduleUnitHoverRelease(unitId?: string | null) {
-    if (unitHoverReleaseRef.current) {
-      window.clearTimeout(unitHoverReleaseRef.current);
-    }
-
-    unitHoverReleaseRef.current = window.setTimeout(() => {
-      clearUnitHover(unitId);
-    }, 3200);
-  }
-
-  function activateUnitHover(unit: {
+  function selectUnit(unit: {
     id: string;
     label: string;
     type: string;
     worldX: number;
     worldY: number;
   }, clientX?: number, clientY?: number) {
-    if (unitHoverReleaseRef.current) {
-      window.clearTimeout(unitHoverReleaseRef.current);
-      unitHoverReleaseRef.current = null;
-    }
-    frozenUnitTimeRef.current = sceneClock;
-    if (hoveredUnitId !== unit.id) {
+    if (selectedUnitId !== unit.id) {
       audio.playUiClick("troop");
     }
 
@@ -555,9 +502,9 @@ export function WorldExplorer({
         ? screenPointToWorld(clientX, clientY)
         : null;
 
-    setHoveredUnitId(unit.id);
-    setLockedHoverUnit({ id: unit.id, x: unit.worldX, y: unit.worldY });
-    setHoveredUnitCard({
+    setSelectedUnitId(unit.id);
+    setSelectedUnitLock({ id: unit.id, x: unit.worldX, y: unit.worldY });
+    setSelectedUnitCard({
       id: unit.id,
       label: unit.label,
       type: unit.type,
@@ -618,50 +565,6 @@ export function WorldExplorer({
           </text>
         </g>
       </g>
-    );
-  }
-
-  function nearestHexCenter(x: number, y: number) {
-    return world.hexes.reduce(
-      (closest, hex) => {
-        const distance = (hex.x - x) ** 2 + (hex.y - y) ** 2;
-        if (distance < closest.distance) {
-          return { x: hex.x, y: hex.y, distance };
-        }
-        return closest;
-      },
-      { x, y, distance: Number.POSITIVE_INFINITY },
-    );
-  }
-
-  function findUnitNearLocalPoint(localX: number, localY: number) {
-    return unitRenderData.reduce<null | (typeof unitRenderData)[number]>(
-      (closest, unit) => {
-        const point = worldPointToLocalPoint(
-          { x: unit.worldX, y: unit.worldY },
-          camera,
-          viewportSize,
-          containerSize,
-        );
-        const distance = Math.hypot(point.x - localX, point.y - localY);
-
-        if (distance > 56) {
-          return closest;
-        }
-
-        if (!closest) {
-          return unit;
-        }
-
-        const closestPoint = worldPointToLocalPoint(
-          { x: closest.worldX, y: closest.worldY },
-          camera,
-          viewportSize,
-          containerSize,
-        );
-        return distance < Math.hypot(closestPoint.x - localX, closestPoint.y - localY) ? unit : closest;
-      },
-      null,
     );
   }
 
@@ -790,45 +693,8 @@ export function WorldExplorer({
             return;
           }
 
-          if (unitDragRef.current || isInteractiveMapTarget(event.target)) {
+          if (isInteractiveMapTarget(event.target)) {
             return;
-          }
-
-          const rect = event.currentTarget.getBoundingClientRect();
-          const localX = event.clientX - rect.left;
-          const localY = event.clientY - rect.top;
-
-          if (hoveredUnitId && lockedHoverUnit?.id === hoveredUnitId) {
-            const lockedPoint = worldPointToLocalPoint(
-              { x: lockedHoverUnit.x, y: lockedHoverUnit.y },
-              camera,
-              viewportSize,
-              containerSize,
-            );
-            if (Math.hypot(lockedPoint.x - localX, lockedPoint.y - localY) <= 92) {
-              if (unitHoverReleaseRef.current) {
-                window.clearTimeout(unitHoverReleaseRef.current);
-                unitHoverReleaseRef.current = null;
-              }
-              setHoveredUnitCard((current) =>
-                current?.id === hoveredUnitId
-                  ? {
-                      ...current,
-                      x: clamp(localX + 12, 12, containerSize.width - 268),
-                      y: clamp(localY - 12, 12, containerSize.height - 156),
-                    }
-                  : current,
-              );
-              return;
-            }
-          }
-
-          const nearestUnit = findUnitNearLocalPoint(localX, localY);
-
-          if (nearestUnit) {
-            activateUnitHover(nearestUnit, event.clientX, event.clientY);
-          } else if (hoveredUnitId) {
-            scheduleUnitHoverRelease(hoveredUnitId);
           }
         }}
         onPointerDown={(event) => {
@@ -837,6 +703,7 @@ export function WorldExplorer({
             return;
           }
           stopIntro();
+          clearSelectedUnit();
           dragRef.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
           dragDistanceRef.current = 0;
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -896,9 +763,9 @@ export function WorldExplorer({
           aria-label="CivFolio world map"
           role="img"
           onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              closePanels();
-            }
+          if (event.target === event.currentTarget) {
+            closePanels();
+          }
           }}
         >
           <defs>
@@ -1172,7 +1039,7 @@ export function WorldExplorer({
             })}
 
             {unitRenderData.map((unit) => {
-              const active = hoveredUnitId === unit.id || unit.parked || unit.dragged;
+              const active = selectedUnitId === unit.id;
               const facingLeft = Math.abs(unit.angle) > Math.PI / 2;
               const uprightAngle = facingLeft
                 ? unit.angle > 0
@@ -1198,141 +1065,28 @@ export function WorldExplorer({
                     fill="rgba(255,255,255,0.001)"
                     pointerEvents="all"
                     className="cursor-pointer outline-none"
-                    onPointerDown={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      stopIntro();
-                      if (unitHoverReleaseRef.current) {
-                        window.clearTimeout(unitHoverReleaseRef.current);
-                        unitHoverReleaseRef.current = null;
-                      }
-                      frozenUnitTimeRef.current = sceneClock;
-                      audio.playUiClick("troop");
-                      const startPoint = screenPointToWorld(event.clientX, event.clientY);
-                      unitDragRef.current = {
-                        id: unit.id,
-                        pointerId: event.pointerId,
-                        offsetX: unit.worldX - startPoint.x,
-                        offsetY: unit.worldY - startPoint.y,
-                      };
-                      event.currentTarget.setPointerCapture(event.pointerId);
-                      setParkedUnits((current) => {
-                        const next = { ...current };
-                        delete next[unit.id];
-                        return next;
-                      });
-                      setDraggedUnit({ id: unit.id, x: unit.worldX, y: unit.worldY });
-                      activateUnitHover(unit, event.clientX, event.clientY);
-                    }}
-                    onPointerMove={(event) => {
-                      if (unitDragRef.current?.id === unit.id && unitDragRef.current.pointerId === event.pointerId) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        const next = screenPointToWorld(event.clientX, event.clientY);
-                        setDraggedUnit({
-                          id: unit.id,
-                          x: next.x + unitDragRef.current.offsetX,
-                          y: next.y + unitDragRef.current.offsetY,
-                        });
-                        setHoveredUnitCard((current) =>
-                          current?.id === unit.id
-                            ? {
-                                ...current,
-                                x: clamp(next.localX + 12, 12, containerSize.width - 268),
-                                y: clamp(next.localY - 12, 12, containerSize.height - 156),
-                              }
-                            : current,
-                        );
-                        return;
-                      }
-                      if (draggedUnit?.id === unit.id) {
-                        return;
-                      }
-                      if (unitHoverReleaseRef.current) {
-                        window.clearTimeout(unitHoverReleaseRef.current);
-                        unitHoverReleaseRef.current = null;
-                      }
-                      const next = screenPointToWorld(event.clientX, event.clientY);
-                      setHoveredUnitCard((current) =>
-                        current?.id === unit.id
-                          ? {
-                              ...current,
-                              x: clamp(next.localX + 12, 12, containerSize.width - 268),
-                              y: clamp(next.localY - 12, 12, containerSize.height - 156),
-                            }
-                          : current,
-                      );
-                    }}
-                    onPointerUp={(event) => {
-                      if (unitDragRef.current?.id !== unit.id || unitDragRef.current.pointerId !== event.pointerId) {
-                        return;
-                      }
-                      event.preventDefault();
-                      event.stopPropagation();
-                      event.currentTarget.releasePointerCapture(event.pointerId);
-                      unitDragRef.current = null;
-                      if (draggedUnit?.id === unit.id) {
-                        const snapped = nearestHexCenter(draggedUnit.x, draggedUnit.y);
-                        setDraggedUnit(null);
-                        setParkedUnits((current) => ({
-                          ...current,
-                          [unit.id]: { x: snapped.x, y: snapped.y, until: sceneClock + 15000 },
-                        }));
-                        activateUnitHover({ ...unit, worldX: snapped.x, worldY: snapped.y });
-                        scheduleUnitHoverRelease(unit.id);
-                      }
-                    }}
-                    onPointerCancel={(event) => {
-                      if (unitDragRef.current?.id !== unit.id || unitDragRef.current.pointerId !== event.pointerId) {
-                        return;
-                      }
-                      event.preventDefault();
-                      event.stopPropagation();
-                      event.currentTarget.releasePointerCapture(event.pointerId);
-                      unitDragRef.current = null;
-                      setDraggedUnit(null);
-                      scheduleUnitHoverRelease(unit.id);
-                    }}
-                    onPointerEnter={(event) => {
-                      if (draggedUnit?.id === unit.id) {
-                        return;
-                      }
-                      activateUnitHover(unit, event.clientX, event.clientY);
-                    }}
-                    onMouseEnter={(event) => {
-                      if (draggedUnit?.id === unit.id) {
-                        return;
-                      }
-                      activateUnitHover(unit, event.clientX, event.clientY);
-                    }}
-                    onPointerLeave={() => scheduleUnitHoverRelease(unit.id)}
-                    onMouseLeave={() => scheduleUnitHoverRelease(unit.id)}
-                    onMouseMove={(event) => {
-                      if (draggedUnit?.id === unit.id) {
-                        return;
-                      }
-                      if (unitHoverReleaseRef.current) {
-                        window.clearTimeout(unitHoverReleaseRef.current);
-                        unitHoverReleaseRef.current = null;
-                      }
-                      const next = screenPointToWorld(event.clientX, event.clientY);
-                      setHoveredUnitCard((current) =>
-                        current?.id === unit.id
-                          ? {
-                              ...current,
-                              x: clamp(next.localX + 12, 12, containerSize.width - 268),
-                              y: clamp(next.localY - 12, 12, containerSize.height - 156),
-                            }
-                          : current,
-                      );
-                    }}
-                    onFocus={() => {
-                      activateUnitHover(unit);
-                    }}
-                    onBlur={() => scheduleUnitHoverRelease(unit.id)}
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
+                      stopIntro();
+                      if (selectedUnitId === unit.id) {
+                        clearSelectedUnit(unit.id);
+                        return;
+                      }
+                      selectUnit(unit, event.clientX, event.clientY);
+                    }}
+                    onFocus={() => {
+                      selectUnit(unit);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        if (selectedUnitId === unit.id) {
+                          clearSelectedUnit(unit.id);
+                        } else {
+                          selectUnit(unit);
+                        }
+                      }
                     }}
                   />
                   <g transform={`scale(${facingLeft ? -1 : 1} 1) rotate(${rotation}) scale(${active ? 1.12 : 0.92})`}>
@@ -1504,7 +1258,7 @@ export function WorldExplorer({
               )}
             >
               <div className="text-[10px] uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-                Campaign Replay · {introIndex + 1}/{introSequence.length}
+                Campaign Replay Â· {introIndex + 1}/{introSequence.length}
               </div>
               <div
                 data-testid="intro-title"
@@ -1718,21 +1472,21 @@ export function WorldExplorer({
           })()
         ) : null}
 
-        {hoveredUnitCard ? (
+        {selectedUnitCard ? (
           <div
             data-map-interactive="true"
             className="pointer-events-none absolute z-[70] w-64 rounded-[22px] border border-[var(--accent)] bg-[rgba(18,12,9,0.92)] px-4 py-4 shadow-[0_18px_50px_rgba(0,0,0,0.42)]"
             style={{
-              left: clamp(hoveredUnitCard.x + 18, 12, containerSize.width - 268),
-              top: clamp(hoveredUnitCard.y - 84, 12, containerSize.height - 156),
+              left: clamp(selectedUnitCard.x + 18, 12, containerSize.width - 268),
+              top: clamp(selectedUnitCard.y - 84, 12, containerSize.height - 156),
             }}
           >
             <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">
-              Traveler · {formatDisplayLabel(hoveredUnitCard.type)}
+              Traveler · {formatDisplayLabel(selectedUnitCard.type)}
             </div>
-            <div className="mt-2 font-display text-3xl text-[var(--parchment)]">{hoveredUnitCard.label}</div>
+            <div className="mt-2 font-display text-3xl text-[var(--parchment)]">{selectedUnitCard.label}</div>
             <div className="mt-2 text-sm leading-7 text-[var(--muted-soft)]">
-              {getTravelerFlavor(hoveredUnitCard.label, hoveredUnitCard.type)}
+              {getTravelerFlavor(selectedUnitCard.label, selectedUnitCard.type)}
             </div>
           </div>
         ) : null}
@@ -1938,3 +1692,4 @@ export function WorldExplorer({
     </section>
   );
 }
+

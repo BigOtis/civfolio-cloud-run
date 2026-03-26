@@ -13,8 +13,8 @@
   "startYear": 2026,
   "tags": ["youtube", "video", "brand", "distribution"],
   "map": {
-    "x": 1180,
-    "y": 170,
+    "x": 1225,
+    "y": 125,
     "terrain": "coast",
     "region": "Signal Coast",
     "bannerTone": "#d76d5c"

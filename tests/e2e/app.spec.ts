@@ -105,20 +105,6 @@ async function setTimelineIndex(page: Page, index: number) {
   await page.mouse.up();
 }
 
-async function sampleIntroTitles(page: Page, samples = 16, intervalMs = 180) {
-  const seen: string[] = [];
-
-  for (let index = 0; index < samples; index += 1) {
-    const text = await page.getByTestId("intro-title").textContent().catch(() => null);
-    if (text && seen.at(-1) !== text) {
-      seen.push(text);
-    }
-    await page.waitForTimeout(intervalMs);
-  }
-
-  return seen;
-}
-
 async function collectIntroTitles(page: Page, expectedTitles: readonly string[]) {
   const seen = new Set<string>();
 
@@ -147,8 +133,8 @@ test.describe("world map interactions", () => {
     await expect(page.getByTestId("intro-panel")).toBeVisible();
     await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Software Engineering");
 
-    const seenTitles = await sampleIntroTitles(page, 24, 220);
-    expect(seenTitles).toEqual(INTRO_TITLES.slice(0, -1));
+    const seenTitles = await collectIntroTitles(page, INTRO_TITLES);
+    expect(seenTitles).toEqual(INTRO_TITLES);
   });
 
   test("intro runs through the full city sequence and can be replayed", async ({ page }) => {
@@ -258,15 +244,28 @@ test.describe("world map interactions", () => {
     );
   });
 
-  test("travelers stay engaged once activated", async ({ page }) => {
+  test("travelers open on click and deselect on background click", async ({ page }) => {
     await openWorldMap(page);
 
     await skipIntro(page);
-    await page.getByRole("button", { name: "Traveler gstack" }).focus();
-    const tooltip = page.locator("div").filter({ hasText: "Traveler · trader" }).first();
+    await page.evaluate(() => {
+      const traveler = document.querySelector('[aria-label="Traveler gstack"]');
+      if (!(traveler instanceof SVGElement)) {
+        throw new Error("Traveler gstack not found");
+      }
+      traveler.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: 640, clientY: 360 }));
+    });
+    const tooltip = page.locator("div").filter({ hasText: "Traveler · Trader" }).first();
     await expect(tooltip).toBeVisible();
-    await page.waitForTimeout(1300);
-    await expect(tooltip).toBeVisible();
+    await page.evaluate(() => {
+      const surface = document.querySelector('[data-map-drag-surface="true"]');
+      if (!(surface instanceof HTMLDivElement)) {
+        throw new Error("Map drag surface not found");
+      }
+      surface.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: 320, clientY: 520, pointerId: 1 }));
+      surface.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: 320, clientY: 520, pointerId: 1 }));
+    });
+    await expect(tooltip).toHaveCount(0);
   });
 
   test("wheel zoom stays anchored to the cursor and feels immediate", async ({ page }) => {

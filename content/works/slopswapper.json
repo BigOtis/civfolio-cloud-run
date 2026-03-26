@@ -13,8 +13,8 @@
   "startYear": 2026,
   "tags": ["typescript", "react", "satire", "ai", "vite"],
   "map": {
-    "x": 930,
-    "y": 238,
+    "x": 1010,
+    "y": 220,
     "terrain": "coast",
     "region": "Eastern Satrapy",
     "bannerTone": "#f0ba7a"

@@ -14,8 +14,8 @@
   "startYear": 2015,
   "tags": ["ibm", "enterprise", "automation", "support"],
   "map": {
-    "x": 1020,
-    "y": 290,
+    "x": 1110,
+    "y": 300,
     "terrain": "hills",
     "region": "Iron March",
     "bannerTone": "#dea85d"

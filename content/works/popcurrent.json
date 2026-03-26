@@ -14,8 +14,8 @@
   "startYear": 2023,
   "tags": ["ai", "publishing", "editorial", "automation", "viral media"],
   "map": {
-    "x": 360,
-    "y": 290,
+    "x": 250,
+    "y": 320,
     "terrain": "plains",
     "region": "West Reach",
     "bannerTone": "#d1c383"

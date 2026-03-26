@@ -13,8 +13,8 @@
   "startYear": 2025,
   "tags": ["robot-future", "blog", "ai", "full-stack"],
   "map": {
-    "x": 720,
-    "y": 330,
+    "x": 710,
+    "y": 350,
     "terrain": "highlands",
     "region": "Central Crown",
     "bannerTone": "#f1c981"

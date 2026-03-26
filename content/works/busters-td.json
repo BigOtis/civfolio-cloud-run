@@ -13,8 +13,8 @@
   "startYear": 2020,
   "tags": ["unreal-engine", "game-dev", "tower-defense"],
   "map": {
-    "x": 1010,
-    "y": 600,
+    "x": 1080,
+    "y": 670,
     "terrain": "forest",
     "region": "Verdant Frontier",
     "bannerTone": "#e7b56f"

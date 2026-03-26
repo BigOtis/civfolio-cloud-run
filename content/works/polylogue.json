@@ -13,8 +13,8 @@
   "startYear": 2026,
   "tags": ["python", "multi-agent", "ui", "ai"],
   "map": {
-    "x": 610,
-    "y": 150,
+    "x": 560,
+    "y": 120,
     "terrain": "highlands",
     "region": "North Observatory",
     "bannerTone": "#87c5dd"
