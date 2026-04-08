@@ -659,6 +659,40 @@ export function WorldExplorer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerSize.height, containerSize.width, pathname, router, searchParams]);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const onWheel = (event: WheelEvent) => {
+      if (isInteractiveMapTarget(event.target)) {
+        return;
+      }
+
+      event.preventDefault();
+      stopIntro();
+      const rect = container.getBoundingClientRect();
+      const anchor = localPointToViewportPoint(
+        event.clientX - rect.left,
+        event.clientY - rect.top,
+        viewportSize,
+        containerSize,
+      );
+      const deltaModeScale =
+        event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 18 : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? 72 : 1;
+      const normalizedDelta = clamp((-event.deltaY * deltaModeScale) * 0.00135, -0.22, 0.22);
+      adjustZoom(normalizedDelta, anchor.x, anchor.y, true);
+    };
+
+    container.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      container.removeEventListener("wheel", onWheel);
+    };
+    // Wheel handling intentionally uses the latest zoom/intro closures without re-attaching per render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerSize.height, containerSize.width, viewportSize.height, viewportSize.width]);
+
   return (
     <section className="select-none px-3 pb-4 sm:px-4 lg:px-6">
       <div
@@ -736,23 +770,6 @@ export function WorldExplorer({
           dragRef.current = null;
           setIsDragging(false);
           setHoveredCity(null);
-        }}
-        onWheel={(event) => {
-          if (isInteractiveMapTarget(event.target)) {
-            return;
-          }
-          event.preventDefault();
-          stopIntro();
-          const rect = event.currentTarget.getBoundingClientRect();
-          const anchor = localPointToViewportPoint(
-            event.clientX - rect.left,
-            event.clientY - rect.top,
-            viewportSize,
-            containerSize,
-          );
-          const deltaModeScale = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 18 : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? 72 : 1;
-          const normalizedDelta = clamp((-event.deltaY * deltaModeScale) * 0.00135, -0.22, 0.22);
-          adjustZoom(normalizedDelta, anchor.x, anchor.y, true);
         }}
       >
         <div className="world-atmosphere pointer-events-none absolute inset-0" />
