@@ -1,0 +1,84 @@
+{
+  "slug": "localtalker",
+  "title": "LocalTalker",
+  "discipline": "code",
+  "summary": "A Blueprint-first Unreal plugin for local character conversations with on-device llama.cpp generation and Qwen3-TTS speech.",
+  "description": [
+    "LocalTalker is a late-era systems city focused on real-time local NPC conversation inside Unreal Engine. It combines in-process llama.cpp text generation, a persistent Qwen3-TTS worker, and game-facing conversation orchestration into one plugin-shaped product.",
+    "What makes it notable is that it is not just a model wrapper. The project includes the player interaction layer, turn-taking and proximity grouping, local voice pipeline management, and automation tests needed to make spoken character interaction feel like an actual gameplay system."
+  ],
+  "importance": 84,
+  "status": "active",
+  "era": "Information",
+  "startYear": 2025,
+  "tags": ["unreal-engine", "c++", "llama.cpp", "qwen3-tts", "local-ai", "plugin"],
+  "map": {
+    "x": 860,
+    "y": 560,
+    "terrain": "forest",
+    "region": "Dialogue Marches",
+    "bannerTone": "#88c6dd"
+  },
+  "links": [],
+  "media": [
+    {
+      "kind": "image",
+      "src": "/assets/works/localtalker.svg",
+      "alt": "A forest stronghold representing the LocalTalker Unreal plugin.",
+      "caption": "A dialogue stronghold built for local NPC conversations, speech synthesis, and in-engine orchestration."
+    }
+  ],
+  "greatWorks": [
+    {
+      "title": "On-Device Dialogue Director",
+      "summary": "A local conversation stack for Unreal characters that streams tokens, speaks replies, and manages who talks when.",
+      "xOffset": 92,
+      "yOffset": -60,
+      "unlockYear": 2025
+    }
+  ],
+  "relationships": [
+    { "target": "polylogue", "type": "inspiration", "label": "Conversation orchestration and agent flow" },
+    { "target": "robot-future", "type": "integration", "label": "Broader AI systems and future-tech arc" },
+    { "target": "slopswapper", "type": "trade", "label": "Public-facing proof of fast AI experimentation" }
+  ],
+  "highlights": [
+    "Builds a Blueprint-first Unreal plugin instead of a standalone AI demo.",
+    "Runs local text generation and local speech synthesis as a game-facing conversation stack.",
+    "Includes proximity grouping, turn-taking, player interaction routing, and automation coverage."
+  ],
+  "productionQueue": [
+    "Keep tightening latency, interruption handling, and spoken turn flow inside Unreal.",
+    "Expand the packaging and setup path so the plugin is easier to move between projects.",
+    "Push further on believable local character interaction as a reusable gameplay system."
+  ],
+  "techTree": ["Unreal Engine 5.7", "C++", "Blueprints", "llama.cpp", "Qwen3-TTS", "Python workers"],
+  "diplomacy": ["Game developers", "AI builders", "Toolsmiths", "Unreal teams"],
+  "tradeRoutes": ["Local NPC dialogue", "Speech synthesis", "Gameplay interaction", "Plugin architecture"],
+  "wonders": ["Blueprint-first local conversation stack", "On-device NPC speech pipeline"],
+  "metrics": {
+    "prestige": 8,
+    "activity": 8,
+    "stability": 6,
+    "reach": 4
+  },
+  "code": {
+    "repo": {
+      "owner": "BigOtis",
+      "name": "LocalTalker"
+    },
+    "role": "Founder and primary engineer",
+    "stack": ["Unreal Engine 5.7", "C++", "Blueprints", "Python", "llama.cpp", "Qwen3-TTS"],
+    "features": [
+      "Local character conversations in Unreal",
+      "Streaming token generation with in-process llama.cpp",
+      "Persistent TTS worker with Qwen3-TTS",
+      "Conversation director and player interaction components"
+    ],
+    "integrations": ["GitHub", "llama.cpp", "Qwen3-TTS"],
+    "architectureNotes": [
+      "Treats local character conversation as a reusable Unreal gameplay subsystem rather than a chat prototype.",
+      "Pairs runtime components with automation tests, voice-path configuration, and packaged-worker tooling."
+    ]
+  }
+}

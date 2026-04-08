@@ -98,6 +98,19 @@ summary {
   animation: unitFloat 7.4s ease-in-out infinite alternate;
 }
 
+.hud-drift {
+  animation: hudDrift 9s ease-in-out infinite alternate;
+}
+
+.city-banner {
+  transform-origin: center;
+  animation: bannerDrift 8.5s ease-in-out infinite alternate;
+}
+
+.city-banner-active {
+  animation-duration: 5.6s;
+}
+
 .panel-enter {
   animation: panelEnter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -153,6 +166,24 @@ summary {
   }
 }
 
+@keyframes hudDrift {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes bannerDrift {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-1.5px);
+  }
+}
+
 @keyframes panelEnter {
   0% {
     opacity: 0;
@@ -181,5 +212,20 @@ summary {
   }
   100% {
     opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-atmosphere,
+  .world-fog,
+  .route-flow,
+  .city-pulse,
+  .city-breath,
+  .city-flame,
+  .unit-float,
+  .hud-drift,
+  .city-banner,
+  .panel-enter {
+    animation: none !important;
   }
 }

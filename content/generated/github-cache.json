@@ -1,6 +1,19 @@
 {
   "generatedAt": "2026-03-24T20:01:00.563Z",
   "repos": {
+    "BigOtis/LocalTalker": {
+      "stars": 0,
+      "forks": 0,
+      "watchers": 0,
+      "openIssues": 0,
+      "closedIssues": 0,
+      "contributors": 1,
+      "releases": 0,
+      "totalCommits": 1,
+      "primaryLanguage": "C++",
+      "pushedAt": "2026-03-13T11:15:52Z",
+      "repoUrl": "https://github.com/BigOtis/LocalTalker"
+    },
     "BigOtis/Polylogue": {
       "stars": 1,
       "forks": 0,

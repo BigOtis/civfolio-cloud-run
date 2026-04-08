@@ -47,7 +47,8 @@
   ],
   "relationships": [
     { "target": "robot-future", "type": "series", "label": "Build logs and public writing" },
-    { "target": "character-chat", "type": "inspiration", "label": "Interactive system thinking" }
+    { "target": "character-chat", "type": "inspiration", "label": "Interactive system thinking" },
+    { "target": "localtalker", "type": "integration", "label": "Shared Unreal Engine experimentation" }
   ],
   "highlights": [
     "Built as a hands-on Unreal Engine learning and production project.",

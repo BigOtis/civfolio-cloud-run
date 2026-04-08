@@ -665,7 +665,7 @@ export function WorldExplorer({
         ref={containerRef}
         data-map-drag-surface="true"
         className={cn(
-          "relative min-h-[calc(100vh-6.75rem)] overflow-hidden rounded-[34px] border border-[rgba(244,211,141,0.18)] bg-[radial-gradient(circle_at_top,_rgba(70,120,160,0.28),_rgba(11,12,17,0.98)_56%)] shadow-[0_40px_120px_rgba(0,0,0,0.42)]",
+          "relative isolate min-h-[calc(100vh-6.75rem)] overflow-hidden rounded-[34px] border border-[rgba(244,211,141,0.18)] bg-[radial-gradient(circle_at_top,_rgba(70,120,160,0.28),_rgba(11,12,17,0.98)_56%)] shadow-[0_40px_120px_rgba(0,0,0,0.42)]",
           isDragging ? "cursor-grabbing" : "cursor-grab",
         )}
         style={{ touchAction: "none" }}
@@ -759,6 +759,7 @@ export function WorldExplorer({
 
         <svg
           viewBox={`0 0 ${world.width} ${world.height}`}
+          preserveAspectRatio="none"
           className="absolute inset-0 h-full w-full"
           aria-label="CivFolio world map"
           role="img"
@@ -1008,7 +1009,11 @@ export function WorldExplorer({
                     active={isSelected || isHovered}
                   />
                   {showBanner ? (
-                    <g transform={`translate(0 ${bannerDy})`} opacity={isSelected ? 1 : 0.92}>
+                    <g
+                      transform={`translate(0 ${bannerDy})`}
+                      opacity={isSelected ? 1 : 0.92}
+                      className={cn("city-banner", isSelected || isHovered ? "city-banner-active" : null)}
+                    >
                       <rect
                         x={bannerX}
                         width={bannerWidth}
@@ -1116,12 +1121,12 @@ export function WorldExplorer({
         <div
           className={cn("pointer-events-none absolute inset-x-4 top-4 z-20 flex items-start justify-between gap-4", isMobile ? "flex-col gap-3" : "flex-wrap")}
         >
-          <div
-            className={cn(
-              "pointer-events-auto rounded-[26px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.64)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl",
-              isMobile
-                ? "max-w-[17rem] px-4 py-3"
-                : isTablet
+            <div
+              className={cn(
+                "hud-drift pointer-events-auto rounded-[26px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.64)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl",
+                isMobile
+                  ? "max-w-[17rem] px-4 py-3"
+                  : isTablet
                   ? "max-w-[28rem] px-5 py-4"
                   : "max-w-[36rem] px-5 py-4",
             )}
@@ -1250,7 +1255,7 @@ export function WorldExplorer({
             <div
               data-testid="intro-panel"
               className={cn(
-                "panel-enter rounded-[26px] border border-[rgba(244,211,141,0.18)] bg-[rgba(17,12,9,0.72)] text-center shadow-[0_24px_70px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+                "panel-enter hud-drift rounded-[26px] border border-[rgba(244,211,141,0.18)] bg-[rgba(17,12,9,0.72)] text-center shadow-[0_24px_70px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
                 isMobile ? "w-[min(22rem,100%)] px-4 py-4" : "w-[min(30rem,100%)] px-5 py-4",
                 introActive
                   ? "pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0"
@@ -1675,7 +1680,7 @@ export function WorldExplorer({
         ) : commandBriefVisible ? (
           <div
             className={cn(
-              "panel-enter absolute right-4 top-28 z-20 hidden max-w-sm rounded-[26px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.66)] px-5 py-4 shadow-[0_18px_45px_rgba(0,0,0,0.26)] backdrop-blur-xl xl:block transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+              "panel-enter hud-drift absolute right-4 top-28 z-20 hidden max-w-sm rounded-[26px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.66)] px-5 py-4 shadow-[0_18px_45px_rgba(0,0,0,0.26)] backdrop-blur-xl xl:block transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
               !selectedWork && !showLeader && !isTablet && !isShort
                 ? "pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0"
                 : "pointer-events-none opacity-0 translate-y-2 scale-[0.985] blur-[2px]",
