@@ -102,6 +102,159 @@ declare global {
   }
 }
 
+function AnimatedUnitsLayer({
+  currentCityMap,
+  introActive,
+  selectedUnitId,
+  selectedUnitLock,
+  terrainAtPoint,
+  toolUnits,
+  stopIntro,
+  clearSelectedUnit,
+  selectUnit,
+}: {
+  currentCityMap: Map<string, { slug: string; x: number; y: number }>;
+  introActive: boolean;
+  selectedUnitId: string | null;
+  selectedUnitLock: { id: string; x: number; y: number } | null;
+  terrainAtPoint: (x: number, y: number) => "coast" | "plains" | "forest" | "hills" | "highlands";
+  toolUnits: SiteConfig["scene"]["toolUnits"];
+  stopIntro: () => void;
+  clearSelectedUnit: (unitId?: string) => void;
+  selectUnit: (
+    unit: {
+      id: string;
+      label: string;
+      type: SiteConfig["scene"]["toolUnits"][number]["type"];
+      color: string;
+      worldX: number;
+      worldY: number;
+      angle: number;
+      terrain: "coast" | "plains" | "forest" | "hills" | "highlands";
+    },
+    clientX?: number,
+    clientY?: number,
+  ) => void;
+}) {
+  const [sceneClock, setSceneClock] = useState(0);
+
+  useEffect(() => {
+    if (introActive || toolUnits.length === 0) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        setSceneClock(performance.now());
+      }
+    }, 180);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [introActive, toolUnits.length]);
+
+  const unitRenderData = useMemo(
+    () =>
+      introActive
+        ? []
+        : toolUnits
+            .map((unit) => {
+              const routeCities = unit.route
+                .map((slug) => currentCityMap.get(slug))
+                .filter((city): city is NonNullable<typeof city> => Boolean(city));
+
+              if (routeCities.length < 2) {
+                return null;
+              }
+
+              const position = getRoutePoint(routeCities, unit.speed, sceneClock);
+              const locked = selectedUnitLock?.id === unit.id ? selectedUnitLock : null;
+              const finalPosition = locked
+                ? { x: locked.x, y: locked.y, angle: position.angle }
+                : position;
+
+              return {
+                ...unit,
+                worldX: finalPosition.x,
+                worldY: finalPosition.y,
+                angle: finalPosition.angle,
+                terrain: terrainAtPoint(finalPosition.x, finalPosition.y),
+              };
+            })
+            .filter((unit): unit is NonNullable<typeof unit> => Boolean(unit)),
+    [currentCityMap, introActive, sceneClock, selectedUnitLock, terrainAtPoint, toolUnits],
+  );
+
+  return (
+    <>
+      {unitRenderData.map((unit) => {
+        const active = selectedUnitId === unit.id;
+        const facingLeft = Math.abs(unit.angle) > Math.PI / 2;
+        const uprightAngle = facingLeft
+          ? unit.angle > 0
+            ? unit.angle - Math.PI
+            : unit.angle + Math.PI
+          : unit.angle;
+        const rotation = clamp((uprightAngle * 180) / Math.PI, -38, 38);
+
+        return (
+          <g
+            key={unit.id}
+            transform={`translate(${unit.worldX} ${unit.worldY})`}
+            opacity={active ? 1 : 0.28}
+            style={{ transition: "opacity 180ms ease-out, transform 180ms ease-out, filter 180ms ease-out" }}
+            filter={active ? "url(#city-outer-glow)" : undefined}
+          >
+            <circle
+              r={48}
+              role="button"
+              tabIndex={0}
+              data-map-interactive="true"
+              aria-label={`Traveler ${unit.label}`}
+              fill="rgba(255,255,255,0.001)"
+              pointerEvents="all"
+              className="cursor-pointer outline-none"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                stopIntro();
+                if (selectedUnitId === unit.id) {
+                  clearSelectedUnit(unit.id);
+                  return;
+                }
+                selectUnit(unit, event.clientX, event.clientY);
+              }}
+              onFocus={() => {
+                selectUnit(unit);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  if (selectedUnitId === unit.id) {
+                    clearSelectedUnit(unit.id);
+                  } else {
+                    selectUnit(unit);
+                  }
+                }
+              }}
+            />
+            <g transform={`scale(${facingLeft ? -1 : 1} 1) rotate(${rotation}) scale(${active ? 1.12 : 0.92})`}>
+              <ToolUnitSprite
+                type={unit.type}
+                color={unit.color}
+                label={unit.label}
+                active={active}
+                onWater={unit.terrain === "coast"}
+              />
+            </g>
+          </g>
+        );
+      })}
+    </>
+  );
+}
+
 export function WorldExplorer({
   site,
   leader,
@@ -130,7 +283,6 @@ export function WorldExplorer({
   const [selectedYear, setSelectedYear] = useState(world.years[world.years.length - 1]);
   const [filter, setFilter] = useState<Work["discipline"] | "all">("all");
   const [camera, setCamera] = useState<CameraState>(initialCamera);
-  const [sceneClock, setSceneClock] = useState(0);
   const [containerSize, setContainerSize] = useState({ width: 1200, height: 840 });
   const [hoveredCity, setHoveredCity] = useState<{
     slug: string;
@@ -209,18 +361,6 @@ export function WorldExplorer({
     return () => window.cancelAnimationFrame(frame);
   }, [isDragging]);
 
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        setSceneClock(performance.now());
-      }
-    }, 120);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, []);
-
   const currentState = world.states[selectedYear];
   const currentCityMap = useMemo(
     () => new Map(currentState.cities.map((city) => [city.slug, city])),
@@ -291,39 +431,6 @@ export function WorldExplorer({
       { terrain: "plains", distance: Number.POSITIVE_INFINITY },
     ).terrain;
   }, [world]);
-  const unitRenderData = useMemo(
-    () =>
-      introActive
-        ? []
-        :
-      site.scene.toolUnits
-        .map((unit) => {
-          const routeCities = unit.route
-            .map((slug) => currentCityMap.get(slug))
-            .filter((city): city is NonNullable<typeof city> => Boolean(city));
-
-          if (routeCities.length < 2) {
-            return null;
-          }
-
-          const position = getRoutePoint(routeCities, unit.speed, sceneClock);
-          const locked = selectedUnitLock?.id === unit.id ? selectedUnitLock : null;
-          const finalPosition = locked
-            ? { x: locked.x, y: locked.y, angle: position.angle }
-            : position;
-
-          return {
-            ...unit,
-            worldX: finalPosition.x,
-            worldY: finalPosition.y,
-            angle: finalPosition.angle,
-            terrain: terrainAtPoint(finalPosition.x, finalPosition.y),
-          };
-        })
-        .filter((unit): unit is NonNullable<typeof unit> => Boolean(unit)),
-    [currentCityMap, introActive, sceneClock, selectedUnitLock, site.scene.toolUnits, terrainAtPoint],
-  );
-
   function clampCameraToWorld(next: CameraState) {
     return clampCameraToViewport(next, viewportSize, { width: world.width, height: world.height });
   }
@@ -1060,69 +1167,17 @@ export function WorldExplorer({
               );
             })}
 
-            {unitRenderData.map((unit) => {
-              const active = selectedUnitId === unit.id;
-              const facingLeft = Math.abs(unit.angle) > Math.PI / 2;
-              const uprightAngle = facingLeft
-                ? unit.angle > 0
-                  ? unit.angle - Math.PI
-                  : unit.angle + Math.PI
-                : unit.angle;
-              const rotation = clamp((uprightAngle * 180) / Math.PI, -38, 38);
-
-              return (
-                <g
-                  key={unit.id}
-                  transform={`translate(${unit.worldX} ${unit.worldY})`}
-                  opacity={active ? 1 : 0.28}
-                  style={{ transition: "opacity 180ms ease-out, transform 180ms ease-out, filter 180ms ease-out" }}
-                  filter={active ? "url(#city-outer-glow)" : undefined}
-                >
-                  <circle
-                    r={48}
-                    role="button"
-                    tabIndex={0}
-                    data-map-interactive="true"
-                    aria-label={`Traveler ${unit.label}`}
-                    fill="rgba(255,255,255,0.001)"
-                    pointerEvents="all"
-                    className="cursor-pointer outline-none"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      stopIntro();
-                      if (selectedUnitId === unit.id) {
-                        clearSelectedUnit(unit.id);
-                        return;
-                      }
-                      selectUnit(unit, event.clientX, event.clientY);
-                    }}
-                    onFocus={() => {
-                      selectUnit(unit);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        if (selectedUnitId === unit.id) {
-                          clearSelectedUnit(unit.id);
-                        } else {
-                          selectUnit(unit);
-                        }
-                      }
-                    }}
-                  />
-                  <g transform={`scale(${facingLeft ? -1 : 1} 1) rotate(${rotation}) scale(${active ? 1.12 : 0.92})`}>
-                    <ToolUnitSprite
-                      type={unit.type}
-                      color={unit.color}
-                      label={unit.label}
-                      active={active}
-                      onWater={unit.terrain === "coast"}
-                    />
-                  </g>
-                </g>
-              );
-            })}
+            <AnimatedUnitsLayer
+              currentCityMap={currentCityMap}
+              introActive={introActive}
+              selectedUnitId={selectedUnitId}
+              selectedUnitLock={selectedUnitLock}
+              terrainAtPoint={terrainAtPoint}
+              toolUnits={site.scene.toolUnits}
+              stopIntro={stopIntro}
+              clearSelectedUnit={clearSelectedUnit}
+              selectUnit={selectUnit}
+            />
 
             {hoveredGreatWorkEntry
               ? renderGreatWork(hoveredGreatWorkEntry.city, hoveredGreatWorkEntry.item, true)
