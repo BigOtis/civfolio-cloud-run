@@ -18,6 +18,7 @@ export function useWorldAudio(audioConfig: SiteConfig["audio"]) {
   );
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
+  const hasUserInteractedRef = useRef(false);
   const ambientVolume = 0.09;
 
   const createAmbientAudio = useCallback(() => {
@@ -43,12 +44,30 @@ export function useWorldAudio(audioConfig: SiteConfig["audio"]) {
     return context;
   }, []);
 
+  const markUserInteracted = useCallback(() => {
+    hasUserInteractedRef.current = true;
+  }, []);
+
   useEffect(() => {
     return () => {
       musicRef.current?.pause();
       musicRef.current = null;
       void contextRef.current?.close();
       contextRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleInteraction = () => {
+      hasUserInteractedRef.current = true;
+    };
+
+    window.addEventListener("pointerdown", handleInteraction, { passive: true });
+    window.addEventListener("keydown", handleInteraction);
+
+    return () => {
+      window.removeEventListener("pointerdown", handleInteraction);
+      window.removeEventListener("keydown", handleInteraction);
     };
   }, []);
 
@@ -119,6 +138,8 @@ export function useWorldAudio(audioConfig: SiteConfig["audio"]) {
       return;
     }
 
+    markUserInteracted();
+
     if (!musicRef.current) {
       musicRef.current = createAmbientAudio();
     }
@@ -135,7 +156,7 @@ export function useWorldAudio(audioConfig: SiteConfig["audio"]) {
     } catch {
       setStatus("blocked");
     }
-  }, [audioConfig.track, createAmbientAudio, status]);
+  }, [audioConfig.track, createAmbientAudio, markUserInteracted, status]);
 
   const playUiClick = useCallback((kind: "button" | "toggle" | "city" | "close" | "troop" = "button") => {
     if (typeof window === "undefined") {
@@ -144,6 +165,7 @@ export function useWorldAudio(audioConfig: SiteConfig["audio"]) {
 
     void (async () => {
       try {
+        markUserInteracted();
         const context = await ensureAudioContext();
         if (!context) {
           return;
@@ -234,10 +256,10 @@ export function useWorldAudio(audioConfig: SiteConfig["audio"]) {
         // Ignore audio errors on unsupported browsers.
       }
     })();
-  }, [ensureAudioContext]);
+  }, [ensureAudioContext, markUserInteracted]);
 
   const playIntroCue = useCallback((kind: "founding" | "complete" = "founding") => {
-    if (typeof window === "undefined") {
+    if (typeof window === "undefined" || !hasUserInteractedRef.current) {
       return;
     }
 
