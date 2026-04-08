@@ -287,11 +287,7 @@ export function WorldExplorer({
   const [camera, setCamera] = useState<CameraState>(initialCamera);
   const [cameraMotionToken, setCameraMotionToken] = useState(0);
   const [containerSize, setContainerSize] = useState({ width: 1200, height: 840 });
-  const [hoveredCity, setHoveredCity] = useState<{
-    slug: string;
-    x: number;
-    y: number;
-  } | null>(null);
+  const [hoveredCity, setHoveredCity] = useState<string | null>(null);
   const [hoveredGreatWork, setHoveredGreatWork] = useState<string | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [selectedUnitCard, setSelectedUnitCard] = useState<{
@@ -1071,7 +1067,7 @@ export function WorldExplorer({
 
             {visibleCities.map((city) => {
               const isSelected = selectedSlug === city.slug || introFocusSlug === city.slug;
-              const isHovered = hoveredCity?.slug === city.slug;
+              const isHovered = hoveredCity === city.slug;
               const showBanner = true;
               const bannerWidth = city.title.length * 7.9 + 26;
               const adornmentLayout = cityAdornmentLayout[city.slug];
@@ -1103,24 +1099,11 @@ export function WorldExplorer({
                         openWork(city.slug);
                       }
                     }}
-                    onMouseEnter={(event) => {
-                      const rect = containerRef.current?.getBoundingClientRect();
-                      setHoveredCity({
-                        slug: city.slug,
-                        x: event.clientX - (rect?.left ?? 0),
-                        y: event.clientY - (rect?.top ?? 0),
-                      });
-                    }}
-                    onMouseMove={(event) => {
-                      const rect = containerRef.current?.getBoundingClientRect();
-                      setHoveredCity({
-                        slug: city.slug,
-                        x: event.clientX - (rect?.left ?? 0),
-                        y: event.clientY - (rect?.top ?? 0),
-                      });
+                    onMouseEnter={() => {
+                      setHoveredCity(city.slug);
                     }}
                     onMouseLeave={() => {
-                      setHoveredCity((current) => (current?.slug === city.slug ? null : current));
+                      setHoveredCity((current) => (current === city.slug ? null : current));
                     }}
                   />
                   <g
@@ -1539,18 +1522,20 @@ export function WorldExplorer({
 
         {hoveredCity ? (
           (() => {
-            const city = currentState.cities.find((candidate) => candidate.slug === hoveredCity.slug);
+            const city = currentState.cities.find((candidate) => candidate.slug === hoveredCity);
             if (!city) {
               return null;
             }
+
+            const screenPoint = worldPointToScreen(city.x, city.y);
 
             return (
               <div
                 data-map-interactive="true"
                 className="pointer-events-none absolute z-[70] w-80 rounded-[24px] border border-[var(--accent)] bg-[rgba(18,12,9,0.9)] px-4 py-4 shadow-[0_18px_50px_rgba(0,0,0,0.42)]"
                 style={{
-                  left: clamp(hoveredCity.x + 18, 12, containerSize.width - 332),
-                  top: clamp(hoveredCity.y + 18, 12, containerSize.height - 184),
+                  left: clamp(screenPoint.x + 26, 12, containerSize.width - 332),
+                  top: clamp(screenPoint.y - 48, 12, containerSize.height - 184),
                 }}
               >
                 <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">
