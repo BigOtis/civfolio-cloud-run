@@ -276,6 +276,8 @@ export function WorldExplorer({
   const dragDistanceRef = useRef(0);
   const suppressCityClickRef = useRef(false);
   const cameraTargetRef = useRef<CameraState>(initialCamera);
+  const cameraFrameRef = useRef<number | null>(null);
+  const isDraggingRef = useRef(false);
   const introCancelledRef = useRef(false);
   const introTimeoutRef = useRef<number | null>(null);
   const introCueKeyRef = useRef<string | null>(null);
@@ -283,6 +285,7 @@ export function WorldExplorer({
   const [selectedYear, setSelectedYear] = useState(world.years[world.years.length - 1]);
   const [filter, setFilter] = useState<Work["discipline"] | "all">("all");
   const [camera, setCamera] = useState<CameraState>(initialCamera);
+  const [cameraMotionToken, setCameraMotionToken] = useState(0);
   const [containerSize, setContainerSize] = useState({ width: 1200, height: 840 });
   const [hoveredCity, setHoveredCity] = useState<{
     slug: string;
@@ -332,13 +335,19 @@ export function WorldExplorer({
   }, []);
 
   useEffect(() => {
-    let frame = 0;
+    isDraggingRef.current = isDragging;
+  }, [isDragging]);
+
+  useEffect(() => {
+    if (cameraFrameRef.current !== null) {
+      window.cancelAnimationFrame(cameraFrameRef.current);
+      cameraFrameRef.current = null;
+    }
 
     const tick = () => {
-      frame = window.requestAnimationFrame(tick);
       setCamera((current) => {
         const target = cameraTargetRef.current;
-        const ease = isDragging ? 0.34 : 0.16;
+        const ease = isDraggingRef.current ? 0.34 : 0.16;
         const next = {
           zoom: current.zoom + (target.zoom - current.zoom) * ease,
           x: current.x + (target.x - current.x) * ease,
@@ -350,16 +359,24 @@ export function WorldExplorer({
           Math.abs(next.x - target.x) < 0.5 &&
           Math.abs(next.y - target.y) < 0.5
         ) {
+          cameraFrameRef.current = null;
           return target;
         }
 
+        cameraFrameRef.current = window.requestAnimationFrame(tick);
         return next;
       });
     };
 
-    frame = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(frame);
-  }, [isDragging]);
+    cameraFrameRef.current = window.requestAnimationFrame(tick);
+
+    return () => {
+      if (cameraFrameRef.current !== null) {
+        window.cancelAnimationFrame(cameraFrameRef.current);
+        cameraFrameRef.current = null;
+      }
+    };
+  }, [cameraMotionToken]);
 
   const currentState = world.states[selectedYear];
   const currentCityMap = useMemo(
@@ -442,7 +459,9 @@ export function WorldExplorer({
   ) {
     const resolved =
       typeof next === "function" ? next(cameraTargetRef.current) : next;
-    cameraTargetRef.current = clampCameraToWorld(resolved);
+    const clamped = clampCameraToWorld(resolved);
+    cameraTargetRef.current = clamped;
+    setCameraMotionToken((value) => value + 1);
   }
 
   function adjustZoom(
