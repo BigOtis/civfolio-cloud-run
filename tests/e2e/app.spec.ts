@@ -465,9 +465,15 @@ test.describe("world map interactions", () => {
     });
 
     await page.goto("/", { waitUntil: "networkidle" });
+    await expect(page.getByRole("link", { name: "Robot Future" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Skip Intro" })).toBeVisible();
+    await expect(page.getByLabel("Timeline slider")).toHaveCount(0);
+    await page.getByRole("button", { name: "Skip Intro" }).click();
+    await expect(page.getByTestId("intro-panel")).toHaveCount(0);
     await expect(page.getByLabel("Timeline slider")).toBeVisible();
-    await skipIntro(page);
+    await page.getByRole("button", { name: "Map Key" }).click();
+    await expect(page.locator("body")).toContainText("Great Works are landmark achievements.");
+    await page.getByRole("button", { name: "Close" }).click();
     await clickMapCity(page, "popcurrent");
     await expect(page.getByText("City Management View")).toBeVisible();
     await expect(page.getByAltText("The PopCurrent social preview image from the live site.")).toBeVisible();

@@ -106,6 +106,7 @@ export function WorldExplorer({
   const isTablet = containerSize.width < 1100;
   const isMobile = containerSize.width < 760;
   const isShort = containerSize.height < 760;
+  const showMobileTimeline = !isMobile || !introActive;
 
   useEffect(() => {
     const element = containerRef.current;
@@ -620,13 +621,16 @@ export function WorldExplorer({
         />
 
         <div
-          className={cn("pointer-events-none absolute inset-x-4 top-4 z-20 flex items-start justify-between gap-4", isMobile ? "flex-col gap-3" : "flex-wrap")}
+          className={cn(
+            "pointer-events-none absolute z-20 flex items-start justify-between gap-4",
+            isMobile ? "inset-x-3 top-3 flex-col gap-3" : "inset-x-4 top-4 flex-wrap",
+          )}
         >
             <div
               className={cn(
                 "hud-drift pointer-events-auto rounded-[26px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.64)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl",
                 isMobile
-                  ? "max-w-[17rem] px-4 py-3"
+                  ? "w-full max-w-none px-4 py-3"
                   : isTablet
                   ? "max-w-[28rem] px-5 py-4"
                   : "max-w-[36rem] px-5 py-4",
@@ -640,9 +644,9 @@ export function WorldExplorer({
                 {currentState.label}
               </span>
             </div>
-            <h1 className={cn("mt-3 font-display leading-[0.94] text-[var(--parchment)]", isMobile ? "text-[2.35rem]" : isTablet ? "text-5xl" : "text-6xl")}>
+            <h1 className={cn("mt-3 font-display leading-[0.94] text-[var(--parchment)]", isMobile ? "text-[1.95rem]" : isTablet ? "text-5xl" : "text-6xl")}>
               {leader.name}
-              <span className="mt-2 block text-[0.5em] leading-[1.08] uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+              <span className={cn("mt-2 block uppercase text-[var(--accent-strong)]", isMobile ? "text-[0.44em] leading-[1.12] tracking-[0.14em]" : "text-[0.5em] leading-[1.08] tracking-[0.18em]")}>
                 Strategy Map of Work
               </span>
             </h1>
@@ -690,14 +694,15 @@ export function WorldExplorer({
                 value={filter === "all" ? "All" : formatDisciplineLabel(filter)}
               />
             )}
-            <div className={cn("rounded-[24px] border border-white/10 bg-[rgba(14,10,8,0.62)] p-2 shadow-[0_18px_45px_rgba(0,0,0,0.24)] backdrop-blur-xl", isMobile ? "w-full max-w-[19.5rem]" : "")}>
-              <div className={cn("flex flex-wrap gap-2", isMobile ? "justify-start" : "")}>
+            <div className={cn("rounded-[24px] border border-white/10 bg-[rgba(14,10,8,0.62)] p-2 shadow-[0_18px_45px_rgba(0,0,0,0.24)] backdrop-blur-xl", isMobile ? "w-full max-w-none" : "")}>
+              <div className={cn(isMobile ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2")}>
                 <OverlayButton
                   onClick={() => {
                     audio.playUiClick("toggle");
                     stopIntro();
                     adjustZoom(-0.08);
                   }}
+                  className={isMobile ? "w-full" : undefined}
                 >
                   -
                 </OverlayButton>
@@ -707,16 +712,17 @@ export function WorldExplorer({
                     stopIntro();
                     adjustZoom(0.08);
                   }}
+                  className={isMobile ? "w-full" : undefined}
                 >
                   +
                 </OverlayButton>
-                <OverlayButton onClick={resetView}>Reset</OverlayButton>
+                <OverlayButton onClick={resetView} className={isMobile ? "w-full" : undefined}>Reset</OverlayButton>
                 <OverlayButton
                   onClick={() => {
                     audio.playUiClick("toggle");
                     void audio.toggleMusic();
                   }}
-                  className={isMobile ? "min-w-[8.75rem]" : undefined}
+                  className={isMobile ? "w-full" : undefined}
                 >
                   {audio.status === "on"
                     ? `${site.audio.label} on`
@@ -731,7 +737,7 @@ export function WorldExplorer({
                     stopIntro();
                     setShowLegend((value) => !value);
                   }}
-                  className={isMobile ? "px-3" : undefined}
+                  className={isMobile ? "w-full px-3" : undefined}
                 >
                   Map Key
                 </OverlayButton>
@@ -741,7 +747,7 @@ export function WorldExplorer({
                       audio.playUiClick("button");
                       startIntro();
                     }}
-                    className={isMobile ? "min-w-[8.75rem]" : undefined}
+                    className={isMobile ? "w-full" : undefined}
                   >
                     Replay Intro
                   </OverlayButton>
@@ -752,12 +758,12 @@ export function WorldExplorer({
         </div>
 
         {introPanelVisible && currentIntroWork ? (
-          <div className={cn("pointer-events-none absolute inset-x-4 z-20 flex justify-center", isMobile ? "top-44" : "top-28")}>
+          <div className={cn("pointer-events-none absolute inset-x-4 z-20 flex justify-center", isMobile ? "bottom-4" : "top-28")}>
             <div
               data-testid="intro-panel"
               className={cn(
                 "panel-enter hud-drift rounded-[26px] border border-[rgba(244,211,141,0.18)] bg-[rgba(17,12,9,0.72)] text-center shadow-[0_24px_70px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
-                isMobile ? "w-[min(22rem,100%)] px-4 py-4" : "w-[min(30rem,100%)] px-5 py-4",
+                isMobile ? "w-full max-h-[min(30rem,calc(100vh-12rem))] overflow-y-auto overscroll-contain px-4 py-4" : "w-[min(30rem,100%)] px-5 py-4",
                 introActive
                   ? "pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0"
                   : "pointer-events-none opacity-0 -translate-y-3 scale-[0.985] blur-[2px]",
@@ -803,17 +809,18 @@ export function WorldExplorer({
           </div>
         ) : null}
 
-        <div
-          data-map-interactive="true"
-          className={cn(
-            "absolute z-20 rounded-[28px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.68)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl",
-            isMobile
-              ? "bottom-4 left-4 right-4 px-4 py-3"
-              : isTablet
-                ? "bottom-4 left-4 right-40 px-5 py-4"
-                : "bottom-4 left-4 max-w-[620px] px-5 py-4",
-          )}
-        >
+        {showMobileTimeline ? (
+          <div
+            data-map-interactive="true"
+            className={cn(
+              "absolute z-20 rounded-[28px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.68)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl",
+              isMobile
+                ? "bottom-3 left-3 right-3 px-4 py-3"
+                : isTablet
+                  ? "bottom-4 left-4 right-40 px-5 py-4"
+                  : "bottom-4 left-4 max-w-[620px] px-5 py-4",
+            )}
+          >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="text-[10px] uppercase tracking-[0.28em] text-[var(--muted)]">Time progression</div>
@@ -857,7 +864,63 @@ export function WorldExplorer({
               ))}
             </div>
           </div>
-        </div>
+          </div>
+        ) : null}
+
+        {isMobile && legendPanelVisible ? (
+          <div className="pointer-events-none absolute inset-0 z-[58] flex items-start justify-center p-4 pt-24">
+            <div
+              data-map-interactive="true"
+              className={cn(
+                "panel-enter pointer-events-auto w-full max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-contain rounded-[24px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.86)] p-4 text-sm leading-7 text-[var(--muted-soft)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+                showLegend
+                  ? "opacity-100 translate-y-0 scale-100 blur-0"
+                  : "pointer-events-none opacity-0 translate-y-2 scale-[0.985] blur-[2px]",
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="font-display text-3xl text-[var(--accent-strong)]">Map Key</div>
+                <OverlayButton
+                  onClick={() => {
+                    audio.playUiClick("close");
+                    setShowLegend(false);
+                  }}
+                  className="px-3 py-2 text-[10px]"
+                >
+                  Close
+                </OverlayButton>
+              </div>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <svg width="24" height="24" viewBox="0 0 24 24" className="mt-1 shrink-0">
+                    <circle cx="12" cy="12" r="8" fill="#d8b470" fillOpacity="0.2" />
+                    <circle cx="12" cy="12" r="5" fill="#f4d38d" />
+                  </svg>
+                  <p>Settlements, towns, capitals, and wonders scale with project importance, maturity, and momentum.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <svg width="24" height="24" viewBox="0 0 24 24" className="mt-1 shrink-0">
+                    <path d="M 3 17 C 7 8 16 8 21 17" fill="none" stroke="#9ad5f6" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <p>Rivers, roads, and routes mark shared systems, integrations, and cross-project influence.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <svg width="24" height="24" viewBox="0 0 24 24" className="mt-1 shrink-0">
+                    <rect x="4" y="7" width="16" height="10" rx="3" fill="rgba(244,211,141,0.18)" stroke="#f4d38d" />
+                    <path d="M 7 15 L 7 10 M 11 15 L 11 8 M 15 15 L 15 10" stroke="#f4d38d" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                  <p>Improvements are skill tiles: farms, workshops, harbors, and academies that show what each city learned to grow.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <svg width="24" height="24" viewBox="0 0 24 24" className="mt-1 shrink-0">
+                    <path d="M 5 18 L 12 4 L 19 18 Z" fill="rgba(244,211,141,0.22)" stroke="#f4d38d" />
+                  </svg>
+                  <p>Great Works are landmark achievements. Their names appear on hover to keep the world readable.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className="absolute bottom-4 right-4 z-20 hidden flex-col items-end gap-3 md:flex">
           {legendPanelVisible ? (
