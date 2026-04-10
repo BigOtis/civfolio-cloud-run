@@ -37,8 +37,8 @@ export function viewportPointToLocalPoint(viewportX: number, viewportY: number, 
 }
 
 export function clampCameraToViewport(next: CameraLike, viewport: Size, world: Size) {
-  const marginX = Math.min(120, viewport.width * 0.08);
-  const marginY = Math.min(88, viewport.height * 0.08);
+  const marginX = Math.min(220, Math.max(96, viewport.width * 0.18));
+  const marginY = Math.min(180, Math.max(72, viewport.height * 0.18));
   const minX = viewport.width - world.width * next.zoom - marginX;
   const maxX = marginX;
   const minY = viewport.height - world.height * next.zoom - marginY;

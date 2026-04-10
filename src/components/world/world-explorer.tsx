@@ -2,28 +2,22 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { WorkDetail } from "@/components/work/work-detail";
-import { CityAdornment, CityIllustration, GreatWorkIllustration } from "@/components/world/city-illustration";
+import { WorldMapPixi } from "@/components/world/world-map-pixi";
 import {
   clamp,
-  getImprovementKind,
-  getRoutePoint,
   getTravelerFlavor,
-  ImprovementTile,
-  isInteractiveMapTarget,
   OverlayButton,
   StatChip,
-  ToolUnitSprite,
   usePresence,
   useRetainedPresence,
   useWorldAudio,
 } from "@/components/world/world-explorer-support";
 import {
   clampCameraToViewport,
-  localPointToViewportPoint,
   localPointToWorldPoint,
   worldPointToLocalPoint,
   zoomCameraAtPoint,
@@ -31,22 +25,6 @@ import {
 import type { WorldRenderModel } from "@/lib/content/derive";
 import type { GithubCache, LeaderProfile, SiteConfig, Work } from "@/lib/content/schema";
 import { cn, formatDisciplineLabel, formatDisplayLabel } from "@/lib/utils";
-
-const terrainFill = {
-  coast: "#163755",
-  plains: "#6a7c47",
-  forest: "#35543a",
-  hills: "#72563d",
-  highlands: "#5a4d65",
-} as const;
-
-const terrainPattern = {
-  coast: "url(#terrain-coast)",
-  plains: "url(#terrain-plains)",
-  forest: "url(#terrain-forest)",
-  hills: "url(#terrain-hills)",
-  highlands: "url(#terrain-highlands)",
-} as const;
 
 const disciplineTone = {
   code: "#f2c36f",
@@ -56,32 +34,6 @@ const disciplineTone = {
   writing: "#d2c77e",
   client: "#d59750",
 } as const;
-
-const improvementOffsets = [
-  { x: -74, y: -34 },
-  { x: 82, y: -18 },
-  { x: -62, y: 42 },
-  { x: 70, y: 48 },
-] as const;
-
-const cityBannerOffsetY: Record<string, number> = {
-  popcurrent: -76,
-  polylogue: -82,
-  otisfuse: -62,
-  civfolio: -56,
-};
-
-const cityAdornmentLayout: Record<string, { dx: number; dy: number; scale?: number }> = {
-  "robot-future": { dx: 62, dy: -22, scale: 1.04 },
-  "ibm-support-innovation": { dx: -68, dy: -10, scale: 1.02 },
-  "busters-td": { dx: -56, dy: 18, scale: 0.98 },
-  polylogue: { dx: 72, dy: -18, scale: 0.96 },
-  "character-chat": { dx: 66, dy: -16, scale: 0.96 },
-  otisfuse: { dx: 60, dy: -8, scale: 0.94 },
-  civfolio: { dx: 60, dy: -14, scale: 0.94 },
-  slopswapper: { dx: 60, dy: -10, scale: 0.94 },
-  popcurrent: { dx: 70, dy: -12, scale: 0.96 },
-};
 
 type CameraState = {
   zoom: number;
@@ -99,160 +51,9 @@ declare global {
   interface Window {
     __CIVFOLIO_INTRO_STEP_MS?: number;
     __CIVFOLIO_INTRO_FINAL_MS?: number;
+    __CIVFOLIO_CREATOR_PROMPT_DELAY_MS?: number;
+    __CIVFOLIO_CREATOR_PROMPT_LIFETIME_MS?: number;
   }
-}
-
-function AnimatedUnitsLayer({
-  currentCityMap,
-  introActive,
-  selectedUnitId,
-  selectedUnitLock,
-  terrainAtPoint,
-  toolUnits,
-  stopIntro,
-  clearSelectedUnit,
-  selectUnit,
-}: {
-  currentCityMap: Map<string, { slug: string; x: number; y: number }>;
-  introActive: boolean;
-  selectedUnitId: string | null;
-  selectedUnitLock: { id: string; x: number; y: number } | null;
-  terrainAtPoint: (x: number, y: number) => "coast" | "plains" | "forest" | "hills" | "highlands";
-  toolUnits: SiteConfig["scene"]["toolUnits"];
-  stopIntro: () => void;
-  clearSelectedUnit: (unitId?: string) => void;
-  selectUnit: (
-    unit: {
-      id: string;
-      label: string;
-      type: SiteConfig["scene"]["toolUnits"][number]["type"];
-      color: string;
-      worldX: number;
-      worldY: number;
-      angle: number;
-      terrain: "coast" | "plains" | "forest" | "hills" | "highlands";
-    },
-    clientX?: number,
-    clientY?: number,
-  ) => void;
-}) {
-  const [sceneClock, setSceneClock] = useState(0);
-
-  useEffect(() => {
-    if (introActive || toolUnits.length === 0) {
-      return;
-    }
-
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        setSceneClock(performance.now());
-      }
-    }, 180);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [introActive, toolUnits.length]);
-
-  const unitRenderData = useMemo(
-    () =>
-      introActive
-        ? []
-        : toolUnits
-            .map((unit) => {
-              const routeCities = unit.route
-                .map((slug) => currentCityMap.get(slug))
-                .filter((city): city is NonNullable<typeof city> => Boolean(city));
-
-              if (routeCities.length < 2) {
-                return null;
-              }
-
-              const position = getRoutePoint(routeCities, unit.speed, sceneClock);
-              const locked = selectedUnitLock?.id === unit.id ? selectedUnitLock : null;
-              const finalPosition = locked
-                ? { x: locked.x, y: locked.y, angle: position.angle }
-                : position;
-
-              return {
-                ...unit,
-                worldX: finalPosition.x,
-                worldY: finalPosition.y,
-                angle: finalPosition.angle,
-                terrain: terrainAtPoint(finalPosition.x, finalPosition.y),
-              };
-            })
-            .filter((unit): unit is NonNullable<typeof unit> => Boolean(unit)),
-    [currentCityMap, introActive, sceneClock, selectedUnitLock, terrainAtPoint, toolUnits],
-  );
-
-  return (
-    <>
-      {unitRenderData.map((unit) => {
-        const active = selectedUnitId === unit.id;
-        const facingLeft = Math.abs(unit.angle) > Math.PI / 2;
-        const uprightAngle = facingLeft
-          ? unit.angle > 0
-            ? unit.angle - Math.PI
-            : unit.angle + Math.PI
-          : unit.angle;
-        const rotation = clamp((uprightAngle * 180) / Math.PI, -38, 38);
-
-        return (
-          <g
-            key={unit.id}
-            transform={`translate(${unit.worldX} ${unit.worldY})`}
-            opacity={active ? 1 : 0.28}
-            style={{ transition: "opacity 180ms ease-out, transform 180ms ease-out, filter 180ms ease-out" }}
-            filter={active ? "url(#city-outer-glow)" : undefined}
-          >
-            <circle
-              r={48}
-              role="button"
-              tabIndex={0}
-              data-map-interactive="true"
-              aria-label={`Traveler ${unit.label}`}
-              fill="rgba(255,255,255,0.001)"
-              pointerEvents="all"
-              className="cursor-pointer outline-none"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                stopIntro();
-                if (selectedUnitId === unit.id) {
-                  clearSelectedUnit(unit.id);
-                  return;
-                }
-                selectUnit(unit, event.clientX, event.clientY);
-              }}
-              onFocus={() => {
-                selectUnit(unit);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  if (selectedUnitId === unit.id) {
-                    clearSelectedUnit(unit.id);
-                  } else {
-                    selectUnit(unit);
-                  }
-                }
-              }}
-            />
-            <g transform={`scale(${facingLeft ? -1 : 1} 1) rotate(${rotation}) scale(${active ? 1.12 : 0.92})`}>
-              <ToolUnitSprite
-                type={unit.type}
-                color={unit.color}
-                label={unit.label}
-                active={active}
-                onWater={unit.terrain === "coast"}
-              />
-            </g>
-          </g>
-        );
-      })}
-    </>
-  );
 }
 
 export function WorldExplorer({
@@ -272,9 +73,6 @@ export function WorldExplorer({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const dragRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
-  const dragDistanceRef = useRef(0);
-  const suppressCityClickRef = useRef(false);
   const cameraTargetRef = useRef<CameraState>(initialCamera);
   const cameraFrameRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
@@ -303,6 +101,7 @@ export function WorldExplorer({
   const [showLeader, setShowLeader] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showCreatorPrompt, setShowCreatorPrompt] = useState(false);
   const audio = useWorldAudio(site.audio);
   const isTablet = containerSize.width < 1100;
   const isMobile = containerSize.width < 760;
@@ -379,13 +178,14 @@ export function WorldExplorer({
     () => new Map(currentState.cities.map((city) => [city.slug, city])),
     [currentState.cities],
   );
-  const selectedSlug = searchParams.get("work");
+  const routeSelectedSlug = searchParams.get("work");
+  const [optimisticSelectedSlug, setOptimisticSelectedSlug] = useState<string | null>(routeSelectedSlug);
+  const selectedSlug = optimisticSelectedSlug;
   const cityLookup = currentCityMap;
-  const visibleCities = useMemo(
-    () => currentState.cities.filter((city) => filter === "all" || city.discipline === filter),
-    [currentState.cities, filter],
-  );
   const selectedWork = works.find((work) => work.slug === selectedSlug);
+  useEffect(() => {
+    setOptimisticSelectedSlug(routeSelectedSlug);
+  }, [routeSelectedSlug]);
   const workBySlug = useMemo(() => new Map(works.map((work) => [work.slug, work])), [works]);
   const selectedCity = selectedSlug ? cityLookup.get(selectedSlug) : undefined;
   const selectedWorkVisible = Boolean(selectedCity);
@@ -396,12 +196,37 @@ export function WorldExplorer({
         .filter((work): work is Work => Boolean(work)),
     [site.scene.introSequence, works],
   );
+  const introFoundedSlugs = useMemo(() => {
+    if (!introActive) {
+      return null;
+    }
+
+    return new Set(introSequence.slice(0, introIndex + 1).map((work) => work.slug));
+  }, [introActive, introIndex, introSequence]);
+  const mapState = useMemo(() => {
+    if (!introFoundedSlugs) {
+      return currentState;
+    }
+
+    return {
+      ...currentState,
+      cities: currentState.cities.filter((city) => introFoundedSlugs.has(city.slug)),
+      routes: currentState.routes.filter(
+        (route) => introFoundedSlugs.has(route.from) && introFoundedSlugs.has(route.to),
+      ),
+    };
+  }, [currentState, introFoundedSlugs]);
+  const visibleCities = useMemo(
+    () => mapState.cities.filter((city) => filter === "all" || city.discipline === filter),
+    [filter, mapState.cities],
+  );
   const currentIntroWork = introSequence[Math.min(introIndex, Math.max(introSequence.length - 1, 0))];
   const introFocusSlug = introActive && currentIntroWork ? currentIntroWork.slug : null;
   const latestYear = world.years[world.years.length - 1];
   const introPanelVisible = usePresence(introActive && Boolean(currentIntroWork), 260);
   const leaderPanelVisible = usePresence(showLeader, 220);
   const legendPanelVisible = usePresence(showLegend, 220);
+  const creatorPromptVisible = usePresence(showCreatorPrompt, 220);
   const commandBriefVisible = usePresence(!selectedWork && !showLeader && !isTablet && !isShort, 220);
   const selectedWorkPanel = useRetainedPresence(selectedWorkVisible ? selectedWork ?? null : null, Boolean(selectedWork && selectedWorkVisible), 240);
   const hiddenWorkPanel = useRetainedPresence(
@@ -416,22 +241,13 @@ export function WorldExplorer({
     selectedWorkPanel.retained?.code?.repo &&
     github.repos[`${selectedWorkPanel.retained.code.repo.owner}/${selectedWorkPanel.retained.code.repo.name}`];
   const introProgress = introSequence.length > 0 ? (introIndex + 1) / introSequence.length : 0;
-  const viewportSize = useMemo(() => ({ width: world.width, height: world.height }), [world.height, world.width]);
-  const hoveredGreatWorkEntry = useMemo(() => {
-    if (!hoveredGreatWork) {
-      return null;
-    }
-
-    for (const city of visibleCities) {
-      for (const item of city.greatWorks) {
-        if ((!item.unlockYear || item.unlockYear <= selectedYear) && `${city.slug}:${item.title}` === hoveredGreatWork) {
-          return { city, item };
-        }
-      }
-    }
-
-    return null;
-  }, [hoveredGreatWork, selectedYear, visibleCities]);
+  const viewportSize = useMemo(
+    () => ({
+      width: Math.max(1, containerSize.width),
+      height: Math.max(1, containerSize.height),
+    }),
+    [containerSize.height, containerSize.width],
+  );
   const terrainAtPoint = useCallback((x: number, y: number) => {
     return world.hexes.reduce<{ terrain: (typeof world.hexes)[number]["terrain"]; distance: number }>(
       (closest, hex) => {
@@ -478,6 +294,7 @@ export function WorldExplorer({
   }
 
   function updateWorkInRoute(slug?: string) {
+    setOptimisticSelectedSlug(slug ?? null);
     const params = new URLSearchParams(searchParams.toString());
     if (slug) {
       params.set("work", slug);
@@ -485,7 +302,9 @@ export function WorldExplorer({
       params.delete("work");
     }
     const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    startTransition(() => {
+      router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    });
   }
 
   function startIntro() {
@@ -574,10 +393,13 @@ export function WorldExplorer({
   }
 
   function worldPointToScreen(x: number, y: number) {
-    const localPoint = worldPointToLocalPoint({ x, y }, camera, viewportSize, containerSize);
+    return worldPointToLocalPoint({ x, y }, camera, viewportSize, containerSize);
+  }
+
+  function clampCardPosition(x: number, y: number, width: number, height: number) {
     return {
-      x: clamp(localPoint.x, 12, containerSize.width - 268),
-      y: clamp(localPoint.y, 12, containerSize.height - 156),
+      x: clamp(x, 12, containerSize.width - width),
+      y: clamp(y, 12, containerSize.height - height),
     };
   }
 
@@ -632,62 +454,10 @@ export function WorldExplorer({
       type: unit.type,
       ...(next
         ? {
-            x: clamp(next.localX + 12, 12, containerSize.width - 268),
-            y: clamp(next.localY - 12, 12, containerSize.height - 156),
+            ...clampCardPosition(next.localX + 12, next.localY - 12, 268, 156),
           }
-        : worldPointToScreen(unit.worldX, unit.worldY)),
+        : clampCardPosition(worldPointToScreen(unit.worldX, unit.worldY).x + 12, worldPointToScreen(unit.worldX, unit.worldY).y - 12, 268, 156)),
     });
-  }
-
-  function renderGreatWork(city: (typeof visibleCities)[number], item: (typeof visibleCities)[number]["greatWorks"][number], foreground = false) {
-    const key = `${city.slug}:${item.title}`;
-    const isHovered = hoveredGreatWork === key;
-    const width = Math.max(128, item.title.length * 7.1 + 34);
-    const selected = selectedSlug === city.slug || introFocusSlug === city.slug;
-
-    return (
-      <g
-        key={`${key}-${foreground ? "front" : "back"}`}
-        transform={`translate(${city.x + item.xOffset} ${city.y + item.yOffset})`}
-        opacity={foreground ? 1 : isHovered ? 0.22 : selectedSlug && selectedSlug !== city.slug ? 0.5 : 0.82}
-        style={foreground ? { filter: "url(#city-outer-glow)" } : undefined}
-      >
-        <g
-          transform={foreground ? "translate(26 48) scale(1.04)" : "translate(26 48)"}
-          data-map-interactive={foreground ? undefined : "true"}
-          className={foreground ? undefined : "cursor-help"}
-          onMouseEnter={foreground ? undefined : () => setHoveredGreatWork(key)}
-          onMouseLeave={foreground ? undefined : () => setHoveredGreatWork((current) => (current === key ? null : current))}
-        >
-          <GreatWorkIllustration
-            discipline={city.discipline}
-            title={item.title}
-            active={selected || foreground}
-          />
-        </g>
-        <g
-          className="transition-opacity duration-150 ease-out"
-          opacity={foreground || isHovered ? 1 : 0}
-          pointerEvents="none"
-        >
-          <rect
-            x={0}
-            y={0}
-            width={width}
-            height={42}
-            rx={15}
-            fill={foreground ? "rgba(26,18,12,0.94)" : "rgba(26,18,12,0.82)"}
-            stroke={city.bannerTone}
-            strokeOpacity={0.86}
-            strokeWidth={1}
-          />
-          <circle cx={16} cy={21} r={4.5} fill={city.bannerTone} fillOpacity={0.82} />
-          <text x={28} y={25} fontSize={12} fill="#f7e8c7" style={{ letterSpacing: "0.08em" }}>
-            {item.title}
-          </text>
-        </g>
-      </g>
-    );
   }
 
   useEffect(() => {
@@ -758,6 +528,28 @@ export function WorldExplorer({
   }, [audio.playIntroCue, containerSize.width, introActive, introIndex, introSequence, isMobile, latestYear, selectedSlug, showLeader, world.states, world.years]);
 
   useEffect(() => {
+    const delayMs = window.__CIVFOLIO_CREATOR_PROMPT_DELAY_MS ?? 60_000;
+    const timeout = window.setTimeout(() => {
+      setShowCreatorPrompt(true);
+    }, delayMs);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (!showCreatorPrompt) {
+      return;
+    }
+
+    const lifetimeMs = window.__CIVFOLIO_CREATOR_PROMPT_LIFETIME_MS ?? 20_000;
+    const timeout = window.setTimeout(() => {
+      setShowCreatorPrompt(false);
+    }, lifetimeMs);
+
+    return () => window.clearTimeout(timeout);
+  }, [showCreatorPrompt]);
+
+  useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         stopIntro();
@@ -781,40 +573,6 @@ export function WorldExplorer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerSize.height, containerSize.width, pathname, router, searchParams]);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
-      return;
-    }
-
-    const onWheel = (event: WheelEvent) => {
-      if (isInteractiveMapTarget(event.target)) {
-        return;
-      }
-
-      event.preventDefault();
-      stopIntro();
-      const rect = container.getBoundingClientRect();
-      const anchor = localPointToViewportPoint(
-        event.clientX - rect.left,
-        event.clientY - rect.top,
-        viewportSize,
-        containerSize,
-      );
-      const deltaModeScale =
-        event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 18 : event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? 72 : 1;
-      const normalizedDelta = clamp((-event.deltaY * deltaModeScale) * 0.00135, -0.22, 0.22);
-      adjustZoom(normalizedDelta, anchor.x, anchor.y, true);
-    };
-
-    container.addEventListener("wheel", onWheel, { passive: false });
-    return () => {
-      container.removeEventListener("wheel", onWheel);
-    };
-    // Wheel handling intentionally uses the latest zoom/intro closures without re-attaching per render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [containerSize.height, containerSize.width, viewportSize.height, viewportSize.width]);
-
   return (
     <section className="select-none px-3 pb-4 sm:px-4 lg:px-6">
       <div
@@ -824,369 +582,38 @@ export function WorldExplorer({
           "relative isolate min-h-[calc(100vh-6.75rem)] overflow-hidden rounded-[34px] border border-[rgba(244,211,141,0.18)] bg-[radial-gradient(circle_at_top,_rgba(70,120,160,0.28),_rgba(11,12,17,0.98)_56%)] shadow-[0_40px_120px_rgba(0,0,0,0.42)]",
           isDragging ? "cursor-grabbing" : "cursor-grab",
         )}
-        style={{ touchAction: "none" }}
-        onPointerMove={(event) => {
-          if (dragRef.current) {
-            const dx = event.clientX - dragRef.current.x;
-            const dy = event.clientY - dragRef.current.y;
-            const delta = localPointToViewportPoint(dx, dy, viewportSize, containerSize);
-            dragDistanceRef.current += Math.abs(dx) + Math.abs(dy);
-            if (dragDistanceRef.current > 6) {
-              suppressCityClickRef.current = true;
-            }
-            const next = clampCameraToWorld({
-              ...cameraTargetRef.current,
-              x: cameraTargetRef.current.x + delta.x,
-              y: cameraTargetRef.current.y + delta.y,
-            });
-            cameraTargetRef.current = next;
-            setCamera(next);
-            dragRef.current = {
-              x: event.clientX,
-              y: event.clientY,
-              pointerId: dragRef.current.pointerId,
-            };
-            return;
-          }
-
-          if (isInteractiveMapTarget(event.target)) {
-            return;
-          }
-        }}
-        onPointerDown={(event) => {
-          if (isInteractiveMapTarget(event.target)) {
-            stopIntro();
-            return;
-          }
-          stopIntro();
-          clearSelectedUnit();
-          dragRef.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
-          dragDistanceRef.current = 0;
-          event.currentTarget.setPointerCapture(event.pointerId);
-          setIsDragging(true);
-        }}
-        onPointerUp={(event) => {
-          if (dragRef.current) {
-            event.currentTarget.releasePointerCapture(dragRef.current.pointerId);
-          }
-          dragRef.current = null;
-          setIsDragging(false);
-          if (dragDistanceRef.current > 6) {
-            window.setTimeout(() => {
-              suppressCityClickRef.current = false;
-            }, 0);
-          } else {
-            suppressCityClickRef.current = false;
-          }
-        }}
-        onPointerCancel={(event) => {
-          if (dragRef.current) {
-            event.currentTarget.releasePointerCapture(dragRef.current.pointerId);
-          }
-          dragRef.current = null;
-          dragDistanceRef.current = 0;
-          suppressCityClickRef.current = false;
-          setIsDragging(false);
-        }}
-        onPointerLeave={() => {
-          dragRef.current = null;
-          setIsDragging(false);
-          setHoveredCity(null);
-        }}
       >
         <div className="world-atmosphere pointer-events-none absolute inset-0" />
-
-        <svg
-          viewBox={`0 0 ${world.width} ${world.height}`}
-          preserveAspectRatio="none"
-          className="absolute inset-0 h-full w-full"
-          aria-label="CivFolio world map"
-          role="img"
-          onClick={(event) => {
-          if (event.target === event.currentTarget) {
-            closePanels();
-          }
+        <WorldMapPixi
+          world={world}
+          currentState={mapState}
+          visibleCities={visibleCities}
+          workBySlug={workBySlug}
+          selectedYear={selectedYear}
+          selectedSlug={selectedSlug}
+          introFocusSlug={introFocusSlug}
+          hoveredCity={hoveredCity}
+          hoveredGreatWork={hoveredGreatWork}
+          selectedUnitId={selectedUnitId}
+          selectedUnitLock={selectedUnitLock}
+          introActive={introActive}
+          toolUnits={site.scene.toolUnits}
+          camera={camera}
+          terrainAtPoint={terrainAtPoint}
+          onCameraChange={(nextCamera) => {
+            const clamped = clampCameraToWorld(nextCamera);
+            cameraTargetRef.current = clamped;
+            setCamera(clamped);
           }}
-        >
-          <defs>
-            <linearGradient id="world-sea" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#183b5c" />
-              <stop offset="100%" stopColor="#060c14" />
-            </linearGradient>
-            <radialGradient id="map-vignette" cx="50%" cy="45%" r="58%">
-              <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-              <stop offset="100%" stopColor="rgba(0,0,0,0.28)" />
-            </radialGradient>
-            <filter id="city-drop" x="-60%" y="-60%" width="220%" height="220%">
-              <feDropShadow dx="0" dy="12" stdDeviation="10" floodColor="#000000" floodOpacity="0.28" />
-            </filter>
-            <filter id="city-outer-glow" x="-70%" y="-70%" width="240%" height="240%">
-              <feGaussianBlur stdDeviation="10" result="glow" />
-              <feMerge>
-                <feMergeNode in="glow" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-            <pattern id="terrain-coast" width="120" height="120" patternUnits="userSpaceOnUse">
-              <path d="M 0 26 C 18 18 34 18 48 26 C 64 35 82 35 100 26" fill="none" stroke="rgba(154,213,246,0.16)" strokeWidth="4" />
-              <path d="M 12 58 C 32 48 48 48 66 58 C 80 66 100 66 118 58" fill="none" stroke="rgba(154,213,246,0.12)" strokeWidth="3" />
-            </pattern>
-            <pattern id="terrain-plains" width="112" height="112" patternUnits="userSpaceOnUse">
-              <path d="M 8 86 C 24 72 44 72 56 86" fill="none" stroke="rgba(218,236,157,0.16)" strokeWidth="3" />
-              <circle cx="78" cy="44" r="3" fill="rgba(231,245,185,0.18)" />
-              <circle cx="90" cy="48" r="2" fill="rgba(231,245,185,0.12)" />
-            </pattern>
-            <pattern id="terrain-forest" width="116" height="116" patternUnits="userSpaceOnUse">
-              <path d="M 18 76 L 24 60 L 30 76 Z M 48 54 L 55 36 L 62 54 Z M 76 82 L 84 60 L 92 82 Z" fill="rgba(170,214,169,0.2)" />
-              <rect x="23" y="76" width="2" height="6" fill="rgba(120,88,46,0.28)" />
-              <rect x="54" y="54" width="2" height="7" fill="rgba(120,88,46,0.28)" />
-              <rect x="83" y="82" width="2" height="7" fill="rgba(120,88,46,0.28)" />
-            </pattern>
-            <pattern id="terrain-hills" width="120" height="120" patternUnits="userSpaceOnUse">
-              <path d="M 4 82 C 16 62 34 62 46 82 C 58 98 74 98 90 82" fill="none" stroke="rgba(232,203,158,0.16)" strokeWidth="3" />
-              <path d="M 52 38 C 66 20 84 20 98 38" fill="none" stroke="rgba(232,203,158,0.12)" strokeWidth="3" />
-            </pattern>
-            <pattern id="terrain-highlands" width="126" height="126" patternUnits="userSpaceOnUse">
-              <path d="M 14 94 L 28 62 L 42 94 Z M 58 72 L 74 36 L 90 72 Z M 88 102 L 102 72 L 116 102 Z" fill="rgba(215,191,233,0.14)" />
-            </pattern>
-          </defs>
-
-          <rect width={world.width} height={world.height} fill="url(#world-sea)" />
-          <g transform={`translate(${camera.x} ${camera.y}) scale(${camera.zoom})`}>
-            {world.hexes.map((hex) => (
-              <g key={hex.id}>
-                <polygon
-                  points={hex.points}
-                  fill={terrainFill[hex.terrain]}
-                  fillOpacity={hex.terrain === "coast" ? 0.84 : 0.94}
-                  stroke="rgba(255,255,255,0.06)"
-                  strokeWidth={2}
-                />
-                <polygon
-                  points={hex.points}
-                  fill={terrainPattern[hex.terrain]}
-                  opacity={hex.terrain === "coast" ? 0.85 : 0.52}
-                />
-              </g>
-            ))}
-
-            <path
-              d="M 80 610 C 240 540, 320 470, 490 490 C 670 512, 720 640, 910 620 C 1060 603, 1130 530, 1260 450"
-              fill="none"
-              stroke="rgba(122,189,232,0.18)"
-              strokeWidth={18}
-              strokeLinecap="round"
-            />
-            <path
-              d="M 80 610 C 240 540, 320 470, 490 490 C 670 512, 720 640, 910 620 C 1060 603, 1130 530, 1260 450"
-              fill="none"
-              stroke="rgba(154,213,246,0.42)"
-              strokeWidth={7}
-              strokeLinecap="round"
-            />
-            <path
-              d="M 260 120 C 340 200, 340 320, 470 380 C 560 420, 610 460, 670 560"
-              fill="none"
-              stroke="rgba(154,213,246,0.22)"
-              strokeWidth={12}
-              strokeLinecap="round"
-            />
-            <path
-              d="M 260 120 C 340 200, 340 320, 470 380 C 560 420, 610 460, 670 560"
-              fill="none"
-              stroke="rgba(154,213,246,0.4)"
-              strokeWidth={5}
-              strokeLinecap="round"
-            />
-
-            {currentState.routes
-              .filter((route) => {
-                if (filter === "all") {
-                  return true;
-                }
-                const from = currentState.cities.find((city) => city.slug === route.from);
-                const to = currentState.cities.find((city) => city.slug === route.to);
-                return from?.discipline === filter || to?.discipline === filter;
-              })
-              .map((route) => (
-                <g key={route.id}>
-                  <path d={route.path} fill="none" stroke="rgba(8,4,3,0.42)" strokeWidth={8} />
-                  <path
-                    d={route.path}
-                    fill="none"
-                    stroke="#f1cf8b"
-                    strokeOpacity="0.7"
-                    strokeWidth={3.2}
-                    strokeDasharray="12 10"
-                    className="route-flow"
-                  />
-                </g>
-              ))}
-
-            {visibleCities.flatMap((city) =>
-              city.greatWorks
-                .filter((item) => !item.unlockYear || item.unlockYear <= selectedYear)
-                .map((item) => renderGreatWork(city, item)),
-            )}
-
-            {visibleCities.flatMap((city) => {
-              const work = workBySlug.get(city.slug);
-              if (!work) {
-                return [];
-              }
-
-              const improvementLabels = Array.from(
-                new Set(
-                  [
-                    ...work.techTree.slice(0, 2),
-                    ...(city.slug === "robot-future" || city.slug === "ibm-support-innovation"
-                      ? ["Agentic AI"]
-                      : []),
-                  ].filter(Boolean),
-                ),
-              ).slice(0, 3);
-
-              return improvementLabels.map((label, index) => {
-                const offset = improvementOffsets[index % improvementOffsets.length];
-                return (
-                  <g
-                    key={`${city.slug}-improvement-${label}`}
-                    transform={`translate(${city.x + offset.x} ${city.y + offset.y})`}
-                    opacity={0.88}
-                    pointerEvents="none"
-                  >
-                    <ImprovementTile
-                      kind={getImprovementKind(label)}
-                      label={label}
-                      tone={city.bannerTone}
-                    />
-                  </g>
-                );
-              });
-            })}
-
-            {visibleCities.map((city) => {
-              const isSelected = selectedSlug === city.slug || introFocusSlug === city.slug;
-              const isHovered = hoveredCity === city.slug;
-              const showBanner = true;
-              const bannerWidth = city.title.length * 7.9 + 26;
-              const adornmentLayout = cityAdornmentLayout[city.slug];
-              const bannerDy = cityBannerOffsetY[city.slug] ?? -(city.radius + 30);
-              const bannerX = -bannerWidth / 2;
-              const textX = bannerX + 13;
-
-              return (
-                <g
-                  key={city.slug}
-                  transform={`translate(${city.x} ${city.y})`}
-                >
-                  <circle
-                    r={city.radius + 26}
-                    role="button"
-                    tabIndex={0}
-                    data-map-interactive="true"
-                    aria-label={`Open ${city.title}`}
-                    fill="transparent"
-                    className="cursor-pointer outline-none"
-                    onClick={() => {
-                      if (suppressCityClickRef.current) {
-                        return;
-                      }
-                      openWork(city.slug);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        openWork(city.slug);
-                      }
-                    }}
-                    onMouseEnter={() => {
-                      setHoveredCity(city.slug);
-                    }}
-                    onMouseLeave={() => {
-                      setHoveredCity((current) => (current === city.slug ? null : current));
-                    }}
-                  />
-                  <g
-                    aria-hidden="true"
-                    pointerEvents="none"
-                    style={{ filter: isSelected ? "url(#city-outer-glow)" : "url(#city-drop)" }}
-                  >
-                  {isSelected ? (
-                    <circle
-                      r={city.radius + 18}
-                      fill={disciplineTone[city.discipline]}
-                      fillOpacity={0.18}
-                      className="city-pulse"
-                    />
-                  ) : null}
-                  <circle r={city.radius + 11} fill={city.bannerTone} fillOpacity={0.12} />
-                  {adornmentLayout ? (
-                    <g
-                      transform={`translate(${adornmentLayout.dx} ${adornmentLayout.dy}) scale(${adornmentLayout.scale ?? 1})`}
-                      opacity={isSelected || isHovered ? 1 : 0.9}
-                    >
-                      <CityAdornment slug={city.slug} level={city.level} discipline={city.discipline} />
-                    </g>
-                  ) : null}
-                  <CityIllustration
-                    level={city.level}
-                    discipline={city.discipline}
-                    radius={city.radius + (city.level === "wonder" ? 10 : 4)}
-                    active={isSelected || isHovered}
-                  />
-                  {showBanner ? (
-                    <g
-                      transform={`translate(0 ${bannerDy})`}
-                      opacity={isSelected ? 1 : 0.92}
-                      className={cn("city-banner", isSelected || isHovered ? "city-banner-active" : null)}
-                    >
-                      <rect
-                        x={bannerX}
-                        width={bannerWidth}
-                        height={28}
-                        rx={14}
-                        fill="rgba(25,16,11,0.78)"
-                        stroke={city.bannerTone}
-                        strokeOpacity="0.84"
-                        strokeWidth={1.2}
-                      />
-                      <text
-                        x={textX}
-                        y={18}
-                        fontSize={12}
-                        fill="#f7e8c7"
-                        stroke="rgba(12,9,8,0.46)"
-                        strokeWidth="0.8"
-                        paintOrder="stroke"
-                        style={{ letterSpacing: "0.12em", textTransform: "uppercase" }}
-                      >
-                        {city.title}
-                      </text>
-                    </g>
-                  ) : null}
-                  </g>
-                </g>
-              );
-            })}
-
-            <AnimatedUnitsLayer
-              currentCityMap={currentCityMap}
-              introActive={introActive}
-              selectedUnitId={selectedUnitId}
-              selectedUnitLock={selectedUnitLock}
-              terrainAtPoint={terrainAtPoint}
-              toolUnits={site.scene.toolUnits}
-              stopIntro={stopIntro}
-              clearSelectedUnit={clearSelectedUnit}
-              selectUnit={selectUnit}
-            />
-
-            {hoveredGreatWorkEntry
-              ? renderGreatWork(hoveredGreatWorkEntry.city, hoveredGreatWorkEntry.item, true)
-              : null}
-          </g>
-          <rect width={world.width} height={world.height} fill="url(#map-vignette)" pointerEvents="none" />
-        </svg>
+          onDragStateChange={setIsDragging}
+          onBackgroundClick={closePanels}
+          onOpenWork={openWork}
+          onSetHoveredCity={setHoveredCity}
+          onSetHoveredGreatWork={setHoveredGreatWork}
+          onStopIntro={stopIntro}
+          onClearSelectedUnit={clearSelectedUnit}
+          onSelectUnit={selectUnit}
+        />
 
         <div
           className="world-fog pointer-events-none absolute inset-0"
@@ -1337,7 +764,7 @@ export function WorldExplorer({
               )}
             >
               <div className="text-[10px] uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-                Campaign Replay Â· {introIndex + 1}/{introSequence.length}
+                Campaign Replay · {introIndex + 1}/{introSequence.length}
               </div>
               <div
                 data-testid="intro-title"
@@ -1494,10 +921,10 @@ export function WorldExplorer({
               className="cursor-pointer"
             >
               <rect width={world.width} height={world.height} rx={14} fill="#0b121b" />
-              {currentState.routes.map((route) => (
+              {mapState.routes.map((route) => (
                 <path key={route.id} d={route.path} fill="none" stroke="rgba(212,176,106,0.25)" strokeWidth={8} />
               ))}
-              {currentState.cities.map((city) => (
+              {mapState.cities.map((city) => (
                 <circle
                   key={city.slug}
                   cx={city.x}
@@ -1522,20 +949,39 @@ export function WorldExplorer({
 
         {hoveredCity ? (
           (() => {
-            const city = currentState.cities.find((candidate) => candidate.slug === hoveredCity);
+            const city = mapState.cities.find((candidate) => candidate.slug === hoveredCity);
             if (!city) {
               return null;
             }
 
             const screenPoint = worldPointToScreen(city.x, city.y);
+            const tooltipWidth = 320;
+            const horizontalOffset = 24;
+            const verticalInset = 128;
+            const spaceLeft = screenPoint.x;
+            const spaceRight = containerSize.width - screenPoint.x;
+            const preferRight = spaceRight >= tooltipWidth + 40 || spaceRight >= spaceLeft;
+            const anchoredLeft = preferRight
+              ? screenPoint.x + horizontalOffset
+              : screenPoint.x - tooltipWidth - horizontalOffset;
+            const anchoredCenterY = clamp(screenPoint.y, verticalInset, containerSize.height - verticalInset);
+            const tooltipPosition = {
+              x: clamp(anchoredLeft, 12, containerSize.width - tooltipWidth),
+              y: anchoredCenterY,
+            };
 
             return (
               <div
+                data-testid="city-tooltip"
+                data-city-slug={city.slug}
+                data-city-screen-x={screenPoint.x.toFixed(1)}
+                data-city-screen-y={screenPoint.y.toFixed(1)}
                 data-map-interactive="true"
                 className="pointer-events-none absolute z-[70] w-80 rounded-[24px] border border-[var(--accent)] bg-[rgba(18,12,9,0.9)] px-4 py-4 shadow-[0_18px_50px_rgba(0,0,0,0.42)]"
                 style={{
-                  left: clamp(screenPoint.x + 26, 12, containerSize.width - 332),
-                  top: clamp(screenPoint.y - 48, 12, containerSize.height - 184),
+                  left: tooltipPosition.x,
+                  top: tooltipPosition.y,
+                  transform: "translateY(-50%)",
                 }}
               >
                 <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">
@@ -1569,6 +1015,46 @@ export function WorldExplorer({
             <div className="mt-2 text-sm leading-7 text-[var(--muted-soft)]">
               {getTravelerFlavor(selectedUnitCard.label, selectedUnitCard.type)}
             </div>
+          </div>
+        ) : null}
+
+        {creatorPromptVisible ? (
+          <div
+            data-testid="creator-prompt"
+            data-map-interactive="true"
+            className={cn(
+              "panel-enter absolute z-[55] rounded-[24px] border border-[rgba(244,211,141,0.18)] bg-[rgba(16,11,9,0.84)] shadow-[0_24px_60px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+              isMobile ? "bottom-4 left-4 right-4 p-4" : "bottom-4 left-4 w-[min(26rem,calc(100%-3rem))] p-4",
+              showCreatorPrompt
+                ? "pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0"
+                : "pointer-events-none opacity-0 translate-y-2 scale-[0.985] blur-[2px]",
+            )}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">Build Your Own</div>
+                <div className="mt-2 font-display text-2xl leading-tight text-[var(--parchment)]">
+                  Enjoy what you&apos;re seeing here? Want to create your own?
+                </div>
+              </div>
+              <OverlayButton
+                onClick={() => setShowCreatorPrompt(false)}
+                className="px-3 py-2 text-[10px]"
+              >
+                Close
+              </OverlayButton>
+            </div>
+            <p className="mt-3 text-sm leading-7 text-[var(--muted-soft)]">
+              Give your Codex or Claude the README link below to get started.
+            </p>
+            <a
+              href="https://github.com/BigOtis/CivFolio"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-flex rounded-full border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] px-4 py-2 text-[11px] uppercase tracking-[0.24em] text-[var(--accent-strong)] transition hover:bg-[rgba(244,211,141,0.16)]"
+            >
+              CivFolio README
+            </a>
           </div>
         ) : null}
 

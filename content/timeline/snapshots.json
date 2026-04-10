@@ -63,7 +63,7 @@
       "localtalker": { "visible": true, "cityLevel": "city" },
       "robot-future": { "visible": true, "cityLevel": "wonder" },
       "polylogue": { "visible": true, "cityLevel": "city" },
-      "slopswapper": { "visible": true, "cityLevel": "town" },
+      "slopswapper": { "visible": true, "cityLevel": "settlement" },
       "civfolio": { "visible": true, "cityLevel": "city" }
     }
   }

@@ -28,6 +28,9 @@ export type RenderCity = {
   y: number;
   radius: number;
   level: CityLevel;
+  foundedYear: number;
+  ageYears: number;
+  derivedScore: number;
   terrain: Work["map"]["terrain"];
   region: string;
   era: string;
@@ -211,6 +214,9 @@ export function deriveWorldRenderModel(
           y: work.map.y,
           radius: levelRadius(level),
           level,
+          foundedYear: work.startYear,
+          ageYears: Math.max(1, year - work.startYear + 1),
+          derivedScore,
           terrain: work.map.terrain,
           region: work.map.region,
           era: work.era,

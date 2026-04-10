@@ -101,6 +101,48 @@ export function WorkDetail({
   const cardClass = compact
     ? "rounded-[20px] border border-white/10 bg-[rgba(255,255,255,0.04)] px-4 py-3"
     : "rounded-2xl border border-white/10 bg-white/5 px-4 py-3";
+  const stats = compact
+    ? [
+        { label: "Importance", value: `${work.importance}/100` },
+        { label: "Founding Year", value: work.startYear },
+        { label: "Region", value: work.map.region },
+        { label: "Terrain", value: formatDisplayLabel(work.map.terrain) },
+        { label: "Activity", value: work.metrics.activity },
+        { label: "Reach", value: work.metrics.reach },
+      ]
+    : [
+        { label: "Importance", value: `${work.importance}/100` },
+        { label: "Founding Year", value: work.startYear },
+        { label: "Region", value: work.map.region },
+        { label: "Terrain", value: formatDisplayLabel(work.map.terrain) },
+        { label: "Prestige", value: work.metrics.prestige },
+        { label: "Activity", value: work.metrics.activity },
+        { label: "Stability", value: work.metrics.stability },
+        { label: "Reach", value: work.metrics.reach },
+        ...(github
+          ? [
+              { label: "Stars", value: github.stars },
+              { label: "Forks", value: github.forks },
+              { label: "Contributors", value: github.contributors },
+              { label: "Releases", value: github.releases },
+            ]
+          : []),
+      ];
+  const detailSections = [
+    { title: "Buildings", items: work.highlights },
+    { title: "Production Queue", items: work.productionQueue },
+    { title: "Tech Tree", items: work.techTree },
+    { title: "Diplomacy", items: work.diplomacy },
+    { title: "Trade Routes", items: work.tradeRoutes },
+    { title: "Wonders", items: work.wonders },
+  ];
+  const visibleSections = compact
+    ? detailSections.filter((section) => section.items.length > 0).slice(0, 3).map((section) => ({
+        ...section,
+        items: section.items.slice(0, 4),
+      }))
+    : detailSections;
+  const overviewParagraphs = compact ? work.description.slice(0, 2) : work.description;
 
   return (
     <article className="space-y-6">
@@ -164,7 +206,7 @@ export function WorkDetail({
         </div>
       </div>
 
-      {gallery.length > 0 ? (
+      {!compact && gallery.length > 0 ? (
         <section className={compact ? "grid gap-3 sm:grid-cols-2" : "grid gap-4 sm:grid-cols-2"}>
           {gallery.map((item) => (
             <figure
@@ -189,40 +231,33 @@ export function WorkDetail({
         </section>
       ) : null}
 
-      <section className={compact ? "grid gap-3 sm:grid-cols-2" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-4"}>
-        <Stat label="Importance" value={`${work.importance}/100`} />
-        <Stat label="Founding Year" value={work.startYear} />
-        <Stat label="Region" value={work.map.region} />
-        <Stat label="Terrain" value={formatDisplayLabel(work.map.terrain)} />
-        <Stat label="Prestige" value={work.metrics.prestige} />
-        <Stat label="Activity" value={work.metrics.activity} />
-        <Stat label="Stability" value={work.metrics.stability} />
-        <Stat label="Reach" value={work.metrics.reach} />
-        {github ? <Stat label="Stars" value={github.stars} /> : null}
-        {github ? <Stat label="Forks" value={github.forks} /> : null}
-        {github ? <Stat label="Contributors" value={github.contributors} /> : null}
-        {github ? <Stat label="Releases" value={github.releases} /> : null}
+      <section className={compact ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-3" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-4"}>
+        {stats.map((stat) => (
+          <Stat key={stat.label} label={stat.label} value={stat.value} />
+        ))}
       </section>
 
       <section className={compact ? "space-y-4 rounded-[26px] border border-white/10 bg-[rgba(0,0,0,0.18)] p-5" : "space-y-4 rounded-[28px] border border-white/10 bg-black/20 p-5 sm:p-6"}>
         <h2 className="font-display text-3xl text-[var(--accent-strong)]">Overview</h2>
         <div className="space-y-4 text-base leading-8 text-[var(--muted-soft)]">
-          {work.description.map((paragraph) => (
+          {overviewParagraphs.map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
         </div>
+        {compact && work.description.length > overviewParagraphs.length ? (
+          <p className="text-sm uppercase tracking-[0.22em] text-[var(--muted)]">
+            Open the full dossier for the complete civilopedia entry.
+          </p>
+        ) : null}
       </section>
 
       <div className={`grid gap-6 ${compact ? "xl:grid-cols-1" : "xl:grid-cols-2"}`}>
-        <Section title="Buildings" items={work.highlights} />
-        <Section title="Production Queue" items={work.productionQueue} />
-        <Section title="Tech Tree" items={work.techTree} />
-        <Section title="Diplomacy" items={work.diplomacy} />
-        <Section title="Trade Routes" items={work.tradeRoutes} />
-        <Section title="Wonders" items={work.wonders} />
+        {visibleSections.map((section) => (
+          <Section key={section.title} title={section.title} items={section.items} />
+        ))}
       </div>
 
-      {work.greatWorks.length > 0 ? (
+      {!compact && work.greatWorks.length > 0 ? (
         <section className={compact ? "space-y-4 rounded-[26px] border border-white/10 bg-[rgba(0,0,0,0.18)] p-5" : "space-y-4 rounded-[28px] border border-white/10 bg-black/20 p-5 sm:p-6"}>
           <h2 className="font-display text-3xl text-[var(--accent-strong)]">Great Works</h2>
           <div className="grid gap-4 md:grid-cols-2">
@@ -242,7 +277,8 @@ export function WorkDetail({
         </section>
       ) : null}
 
-      <section className={compact ? "space-y-4 rounded-[26px] border border-white/10 bg-[rgba(0,0,0,0.18)] p-5" : "space-y-4 rounded-[28px] border border-white/10 bg-black/20 p-5 sm:p-6"}>
+      {!compact ? (
+        <section className={compact ? "space-y-4 rounded-[26px] border border-white/10 bg-[rgba(0,0,0,0.18)] p-5" : "space-y-4 rounded-[28px] border border-white/10 bg-black/20 p-5 sm:p-6"}>
         <h2 className="font-display text-3xl text-[var(--accent-strong)]">Civilopedia Entry</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <div className={cardClass}>
@@ -269,7 +305,8 @@ export function WorkDetail({
             ))
           ) : null}
         </div>
-      </section>
+        </section>
+      ) : null}
     </article>
   );
 }
