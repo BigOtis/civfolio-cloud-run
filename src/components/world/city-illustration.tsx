@@ -76,12 +76,23 @@ export function CityAdornment({
     );
   }
 
-  if (slug === "ibm-support-innovation") {
+  if (slug === "ibm-support-engineer") {
     return (
       <g opacity={0.92}>
         <rect x="-10" y="-2" width="20" height="9" rx="2" fill={stone} stroke={accent} strokeOpacity="0.45" strokeWidth="0.8" />
         <path d="M -6 -2 L -6 -12 M 0 -2 L 0 -14 M 6 -2 L 6 -10" stroke={roof} strokeWidth="1.2" strokeLinecap="round" />
         <path d="M -7 -12 C -5 -15 -3 -15 -1 -12 M -1 -14 C 1 -17 3 -17 5 -14 M 5 -10 C 7 -13 9 -13 11 -10" fill="none" stroke={accent} strokeOpacity="0.5" strokeWidth="1" />
+      </g>
+    );
+  }
+
+  if (slug === "ibm-ai-machine-learning-engineer") {
+    return (
+      <g opacity={0.94}>
+        <circle cx="0" cy="-3" r="8" fill="none" stroke={accent} strokeOpacity="0.7" strokeWidth="1.2" />
+        <circle cx="0" cy="-3" r="2.6" fill={accent} />
+        <path d="M 0 -11 L 0 -16 M 0 5 L 0 10 M -8 -3 L -13 -3 M 8 -3 L 13 -3" stroke={roof} strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M -6 -9 L -10 -13 M 6 -9 L 10 -13 M -6 3 L -10 7 M 6 3 L 10 7" stroke={accent} strokeOpacity="0.62" strokeWidth="1" strokeLinecap="round" />
       </g>
     );
   }

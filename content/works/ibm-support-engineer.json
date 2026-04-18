@@ -1,0 +1,91 @@
+{
+  "slug": "ibm-support-engineer",
+  "title": "IBM Support Engineer",
+  "discipline": "client",
+  "summary": "Seven years on IBM z/OS support tools: modernizing mainframe debugging, building WebIPCS, and handling SEV1 production incidents under real customer pressure.",
+  "description": [
+    "This city represents Phil's z/OS support tools chapter: the place where customer pressure, low-level debugging, and product-minded tooling all collided. The job was not just fixing issues after they happened; it was changing how hard problems could be investigated the next time.",
+    "The flagship project was WebIPCS, a modern React interface over IBM's classic green-screen IPCS dump debugger. It added visualizations, graphs, structured navigation, and a smoother debugging experience while preserving backward compatibility with the existing IPCS command ecosystem.",
+    "The arc widened into Analysis on Arrival and pyipcs: Python-driven dump analysis, automated artifact generation, and more accessible tooling for z/OS experts who needed faster paths from massive system dumps to useful evidence."
+  ],
+  "importance": 86,
+  "status": "active",
+  "era": "Information",
+  "startYear": 2015,
+  "tags": ["ibm", "enterprise", "support", "automation"],
+  "map": {
+    "x": 1036,
+    "y": 226,
+    "terrain": "hills",
+    "region": "Iron March",
+    "bannerTone": "#dea85d"
+  },
+  "links": [],
+  "media": [
+    {
+      "kind": "image",
+      "src": "/assets/works/ibm-support-engineer-shot.png",
+      "alt": "A role-focused dashboard mockup representing IBM support engineering and operational tooling.",
+      "caption": "A role-and-operations view representing support automation, developer tooling, and customer escalation workflows."
+    },
+    {
+      "kind": "image",
+      "src": "/assets/works/ibm-support-engineer.svg",
+      "alt": "An industrial walled city representing IBM support engineering work.",
+      "caption": "A fortified support city built on automation, reliability, internal tooling, and operational systems work."
+    }
+  ],
+  "greatWorks": [
+    {
+      "title": "Automation Citadel",
+      "summary": "Operational tooling and codified debugging knowledge that turned repeated support work into repeatable leverage for teams and customers.",
+      "xOffset": 96,
+      "yOffset": -64,
+      "unlockYear": 2020
+    },
+    {
+      "title": "WebIPCS",
+      "summary": "A React interface over the classic IPCS dump debugger, replacing green-screen workflows with modern navigation, graphs, and visual debugging while preserving IPCS compatibility.",
+      "xOffset": -154,
+      "yOffset": -102,
+      "unlockYear": 2018
+    },
+    {
+      "title": "AoA",
+      "summary": "Analysis on Arrival introduced Python-driven z/OS dump analysis and automated artifact generation so developers could get structured evidence faster.",
+      "xOffset": -144,
+      "yOffset": 78,
+      "unlockYear": 2022
+    }
+  ],
+  "relationships": [
+    { "target": "ibm-ai-machine-learning-engineer", "type": "series", "label": "Support systems foundation for later AI work" },
+    { "target": "robot-future", "type": "inspiration", "label": "Operational rigor carried into public projects" },
+    { "target": "popcurrent", "type": "inspiration", "label": "Practical automation mindset" }
+  ],
+  "highlights": [
+    "Founded WebIPCS, bringing React, graphs, visualizations, and structured navigation to IPCS without breaking classic workflows.",
+    "Kickstarted Analysis on Arrival and helped push Python-based dump analysis toward reusable components such as pyipcs.",
+    "Handled SEV1 enterprise incidents across JES, zCX, Docker, and OpenShift on z/OS, connecting assembler-level debugging with modern container environments."
+  ],
+  "productionQueue": [
+    "Translate hard-won debugging workflows into clearer tools, artifacts, and interfaces.",
+    "Carry mainframe reliability, customer pressure, and support automation lessons into later AI systems."
+  ],
+  "techTree": ["React", "Python", "z/OS", "IPCS", "JES", "Docker", "OpenShift", "Assembler debugging"],
+  "diplomacy": ["Clients", "Support teams", "z/OS engineering", "Pre-sales stakeholders", "Global engineering orgs"],
+  "tradeRoutes": ["Dump analysis", "Modern debugging UI", "Outage response", "Python automation", "Customer escalations"],
+  "wonders": ["WebIPCS", "Analysis on Arrival", "pyipcs evolution"],
+  "metrics": {
+    "prestige": 8,
+    "activity": 8,
+    "stability": 10,
+    "reach": 7
+  },
+  "client": {
+    "clientName": "IBM",
+    "sector": "Enterprise infrastructure, customer support, and developer tooling",
+    "scope": ["Support automation", "Developer tooling", "Dump analysis", "Operational tooling", "Outage support workflows"],
+    "deliverables": ["WebIPCS", "Analysis on Arrival", "Python dump-analysis tooling", "Developer workflows", "SEV1 support workflows"]
+  }
+}

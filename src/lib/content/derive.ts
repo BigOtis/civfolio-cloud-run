@@ -144,10 +144,43 @@ function getSnapshotForYear(snapshots: TimelineSnapshot[], year: number): Timeli
   return snapshot ?? snapshots[0];
 }
 
-function buildRoutePath(from: Work, to: Work) {
-  const midX = (from.map.x + to.map.x) / 2;
-  const midY = (from.map.y + to.map.y) / 2 - Math.abs(from.map.x - to.map.x) * 0.08;
-  return `M ${from.map.x} ${from.map.y} Q ${midX} ${midY} ${to.map.x} ${to.map.y}`;
+function hashString(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function buildRoutePath(from: Work, to: Work, type: Work["relationships"][number]["type"]) {
+  const dx = to.map.x - from.map.x;
+  const dy = to.map.y - from.map.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const unitX = dx / length;
+  const unitY = dy / length;
+  const perpendicularX = -unitY;
+  const perpendicularY = unitX;
+  const endpointGap = clamp(length * 0.08, 28, 46);
+  const startX = from.map.x + unitX * endpointGap;
+  const startY = from.map.y + unitY * endpointGap;
+  const endX = to.map.x - unitX * endpointGap;
+  const endY = to.map.y - unitY * endpointGap;
+  const midpointX = (startX + endX) / 2;
+  const midpointY = (startY + endY) / 2;
+  const direction = hashString(`${from.slug}:${to.slug}:${type}`) % 2 === 0 ? 1 : -1;
+  const typeBend = {
+    integration: 0.16,
+    trade: 0.24,
+    series: 0.12,
+    team: 0.2,
+    inspiration: 0.32,
+  }[type];
+  const bend = clamp(length * typeBend, 34, 118) * direction;
+  const controlX = midpointX + perpendicularX * bend;
+  const controlY = midpointY + perpendicularY * bend;
+
+  return `M ${Math.round(startX)} ${Math.round(startY)} Q ${Math.round(controlX)} ${Math.round(controlY)} ${Math.round(endX)} ${Math.round(endY)}`;
 }
 
 function computeGithubBoost(work: Work, githubCache: GithubCache) {
@@ -248,14 +281,14 @@ export function deriveWorldRenderModel(
             return undefined;
           }
 
-          return {
-            id: `${from.slug}-${to.slug}`,
-            from: from.slug,
-            to: to.slug,
-            label: relationship.label ?? relationship.type,
-            type: relationship.type,
-            path: buildRoutePath(work, targetWork),
-          } satisfies WorldRoute;
+            return {
+              id: `${from.slug}-${to.slug}`,
+              from: from.slug,
+              to: to.slug,
+              label: relationship.label ?? relationship.type,
+              type: relationship.type,
+              path: buildRoutePath(work, targetWork, relationship.type),
+            } satisfies WorldRoute;
         })
         .filter((route): route is NonNullable<typeof route> => Boolean(route));
     });

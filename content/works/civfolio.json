@@ -13,8 +13,8 @@
   "startYear": 2026,
   "tags": ["nextjs", "portfolio", "framework", "react", "open-source"],
   "map": {
-    "x": 1210,
-    "y": 455,
+    "x": 1016,
+    "y": 604,
     "terrain": "plains",
     "region": "Cartographer's Reach",
     "bannerTone": "#e1c37a"
@@ -45,7 +45,7 @@
   ],
   "relationships": [
     { "target": "robot-future", "type": "integration", "label": "Public brand and portfolio layer" },
-    { "target": "ibm-support-innovation", "type": "inspiration", "label": "Career capital represented as game world" },
+    { "target": "ibm-support-engineer", "type": "inspiration", "label": "Career capital represented as game world" },
     { "target": "slopswapper", "type": "inspiration", "label": "Taste-driven front-end experimentation" }
   ],
   "highlights": [

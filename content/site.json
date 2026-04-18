@@ -24,11 +24,12 @@
   "scene": {
     "introEnabled": true,
     "introSequence": [
-      "ibm-support-innovation",
+      "ibm-support-engineer",
       "busters-td",
       "localtalker",
       "popcurrent",
       "character-chat",
+      "ibm-ai-machine-learning-engineer",
       "robot-future",
       "civfolio",
       "polylogue",
@@ -40,7 +41,7 @@
         "label": "gstack",
         "type": "trader",
         "color": "#f4d38d",
-        "route": ["ibm-support-innovation", "robot-future", "polylogue"],
+        "route": ["ibm-support-engineer", "ibm-ai-machine-learning-engineer", "robot-future", "polylogue"],
         "speed": 0.52
       },
       {
@@ -56,7 +57,7 @@
         "label": "VS Code",
         "type": "builder",
         "color": "#80cadc",
-        "route": ["ibm-support-innovation", "robot-future", "busters-td"],
+        "route": ["ibm-support-engineer", "robot-future", "busters-td"],
         "speed": 0.56
       },
       {
@@ -64,7 +65,7 @@
         "label": "Slack",
         "type": "trader",
         "color": "#d59750",
-        "route": ["ibm-support-innovation", "character-chat", "robot-future"],
+        "route": ["ibm-support-engineer", "character-chat", "robot-future"],
         "speed": 0.62
       },
       {
@@ -72,7 +73,7 @@
         "label": "IBM Bob",
         "type": "scholar",
         "color": "#dea85d",
-        "route": ["ibm-support-innovation", "popcurrent", "robot-future"],
+        "route": ["ibm-ai-machine-learning-engineer", "popcurrent", "robot-future"],
         "speed": 0.48
       },
       {
@@ -96,7 +97,7 @@
         "label": "Agent Scout",
         "type": "scout",
         "color": "#f0c57d",
-        "route": ["polylogue", "robot-future", "ibm-support-innovation"],
+        "route": ["polylogue", "robot-future", "ibm-ai-machine-learning-engineer"],
         "speed": 0.72
       },
       {
@@ -112,7 +113,7 @@
         "label": "Camel Trader",
         "type": "camel-trader",
         "color": "#d8b470",
-        "route": ["ibm-support-innovation", "robot-future", "busters-td"],
+        "route": ["ibm-support-engineer", "robot-future", "busters-td"],
         "speed": 0.46
       },
       {
@@ -128,7 +129,7 @@
         "label": "Archer Watch",
         "type": "archer",
         "color": "#e8d08b",
-        "route": ["popcurrent", "robot-future", "ibm-support-innovation"],
+        "route": ["popcurrent", "robot-future", "ibm-ai-machine-learning-engineer"],
         "speed": 0.54
       }
     ]

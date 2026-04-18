@@ -4,7 +4,8 @@
     "label": "Enterprise Foundations",
     "description": "The first major city forms around enterprise support, infrastructure, and customer-facing engineering at IBM.",
     "workStates": {
-      "ibm-support-innovation": { "visible": true, "cityLevel": "settlement" },
+      "ibm-support-engineer": { "visible": true, "cityLevel": "settlement" },
+      "ibm-ai-machine-learning-engineer": { "visible": false },
       "otisfuse": { "visible": false },
       "busters-td": { "visible": false },
       "popcurrent": { "visible": false },
@@ -21,7 +22,8 @@
     "label": "Engine Experiments",
     "description": "Game development and side-project prototyping start to appear alongside day-job systems work.",
     "workStates": {
-      "ibm-support-innovation": { "cityLevel": "town" },
+      "ibm-support-engineer": { "cityLevel": "town" },
+      "ibm-ai-machine-learning-engineer": { "visible": false },
       "otisfuse": { "visible": false },
       "busters-td": { "visible": true, "cityLevel": "settlement" },
       "popcurrent": { "visible": false },
@@ -38,7 +40,8 @@
     "label": "AI Frontier",
     "description": "Public AI experiments move from prototypes into visible cities with production loops, personas, and news generation.",
     "workStates": {
-      "ibm-support-innovation": { "cityLevel": "city" },
+      "ibm-support-engineer": { "cityLevel": "city" },
+      "ibm-ai-machine-learning-engineer": { "visible": false },
       "otisfuse": { "visible": false },
       "busters-td": { "cityLevel": "town" },
       "popcurrent": { "visible": true, "cityLevel": "town" },
@@ -53,9 +56,10 @@
   {
     "year": 2026,
     "label": "Robot Future Era",
-    "description": "The public brand, multi-agent tools, and long-running experiments connect into a mature portfolio world.",
+    "description": "The public brand, IBM AI work, multi-agent tools, and long-running experiments connect into a mature portfolio world.",
     "workStates": {
-      "ibm-support-innovation": { "visible": true, "cityLevel": "capital" },
+      "ibm-support-engineer": { "visible": true, "cityLevel": "city" },
+      "ibm-ai-machine-learning-engineer": { "visible": true, "cityLevel": "capital" },
       "otisfuse": { "visible": true, "cityLevel": "town" },
       "busters-td": { "visible": true, "cityLevel": "city" },
       "popcurrent": { "visible": true, "cityLevel": "city" },

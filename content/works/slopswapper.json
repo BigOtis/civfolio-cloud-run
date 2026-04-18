@@ -20,13 +20,14 @@
     "bannerTone": "#f0ba7a"
   },
   "links": [
+    { "label": "Live Site", "url": "https://slopper.robot-future.com", "kind": "live" },
     { "label": "Repository", "url": "https://github.com/BigOtis/SlopSwapper", "kind": "repo" }
   ],
   "media": [
     {
       "kind": "image",
       "src": "/assets/works/slopswapper-shot.png",
-      "alt": "A preview image for the SlopSwapper GitHub repository.",
+      "alt": "A live-site preview image for the SlopSwapper satirical landing page.",
       "caption": "A knowingly polished fake product for the age of AI slop."
     }
   ],

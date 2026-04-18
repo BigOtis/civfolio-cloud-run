@@ -1,0 +1,79 @@
+{
+  "slug": "ibm-ai-machine-learning-engineer",
+  "title": "IBM AI and Machine Learning Engineer",
+  "discipline": "client",
+  "summary": "Level 3 MLZ engineering for IBM z/OS: building Bob-powered coding agents, customer-driven AI workflows, and sub-100ms inference paths for enterprise systems.",
+  "description": [
+    "This city represents the MLZ chapter: IBM's z/OS machine-learning work where AI has to survive enterprise constraints, customer pressure, and performance expectations that are far stricter than a toy demo.",
+    "Bob is IBM's coding-agent environment, closer in spirit to Codex or Cursor than to a chatbot. Phil builds and shares agents that automate Jenkins debugging, documentation creation, and team workflows so AI becomes a practical extension of daily engineering.",
+    "The technical edge is the environment: z/OS, Level 3 customer support, high availability, high RAS expectations, AI acceleration, and inference paths that need to perform in the sub-100ms range."
+  ],
+  "importance": 90,
+  "status": "active",
+  "era": "Modern",
+  "startYear": 2024,
+  "tags": ["ibm", "ai", "machine-learning", "agents", "zos"],
+  "map": {
+    "x": 1236,
+    "y": 356,
+    "terrain": "highlands",
+    "region": "Iron March",
+    "bannerTone": "#b9c7f4"
+  },
+  "links": [],
+  "media": [
+    {
+      "kind": "image",
+      "src": "/assets/works/ibm-ai-machine-learning-engineer.svg",
+      "alt": "A glowing enterprise AI city representing IBM AI and machine learning engineering work.",
+      "caption": "A modern IBM-side AI city built around agent workflows, z/OS systems, and production-facing machine learning."
+    }
+  ],
+  "greatWorks": [
+    {
+      "title": "Bob Agent Works",
+      "summary": "Bob-powered coding-agent workflows for Jenkins debugging, documentation creation, and shared team automation.",
+      "xOffset": 92,
+      "yOffset": -70,
+      "unlockYear": 2024
+    },
+    {
+      "title": "Machine Learning Lab",
+      "summary": "Applied ML and inference work shaped by z/OS constraints, AI acceleration, high availability, and sub-100ms performance targets.",
+      "xOffset": -118,
+      "yOffset": -84,
+      "unlockYear": 2025
+    }
+  ],
+  "relationships": [
+    { "target": "ibm-support-engineer", "type": "series", "label": "AI work built on support engineering context" },
+    { "target": "robot-future", "type": "inspiration", "label": "Agentic AI thinking carried into public projects" },
+    { "target": "polylogue", "type": "inspiration", "label": "Multi-agent interface direction" },
+    { "target": "popcurrent", "type": "inspiration", "label": "Production AI workflow mindset" }
+  ],
+  "highlights": [
+    "Builds Bob-based agents that automate Jenkins debugging, documentation creation, and repeatable team workflows.",
+    "Works on MLZ Level 3 support, resolving customer issues while feeding real-world findings back into development direction.",
+    "Ships AI/ML work for a demanding z/OS environment where inference latency, RAS, availability, and enterprise reliability all matter."
+  ],
+  "productionQueue": [
+    "Turn recurring engineering and customer-support workflows into reusable agent systems.",
+    "Keep pushing enterprise AI toward fast, reliable, operationally useful inference rather than demo-only intelligence."
+  ],
+  "techTree": ["Bob", "Agentic AI", "Machine learning", "z/OS", "Jenkins", "AI acceleration", "Enterprise inference"],
+  "diplomacy": ["z/OS engineering", "AI product teams", "Support teams", "Enterprise stakeholders"],
+  "tradeRoutes": ["Coding agents", "Jenkins debugging", "Documentation automation", "Level 3 customer feedback", "Sub-100ms inference"],
+  "wonders": ["Bob agent workflows", "MLZ Level 3 bridge", "Enterprise AI inference"],
+  "metrics": {
+    "prestige": 9,
+    "activity": 9,
+    "stability": 9,
+    "reach": 7
+  },
+  "client": {
+    "clientName": "IBM",
+    "sector": "Enterprise AI, machine learning, and z/OS software",
+    "scope": ["AI product work", "Machine learning workflows", "Agentic AI", "z/OS engineering", "Enterprise automation", "Level 3 customer support"],
+    "deliverables": ["Bob agent workflows", "Jenkins debugging agents", "Documentation agents", "AI-assisted systems for z/OS", "Production-minded ML tooling"]
+  }
+}

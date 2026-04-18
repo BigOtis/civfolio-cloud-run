@@ -1,15 +1,30 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const INTRO_TITLES = [
-  "Founding IBM Software Engineering",
+  "Founding IBM Support Engineer",
   "Founding Buster's TD",
   "Founding LocalTalker",
   "Founding PopCurrent",
   "Founding Character Chat",
+  "Founding IBM AI and Machine Learning Engineer",
   "Founding Robot Future",
   "Founding CivFolio",
   "Founding Polylogue",
   "Founding OtisFuse",
+] as const;
+
+const CITY_SLUGS = [
+  "ibm-support-engineer",
+  "ibm-ai-machine-learning-engineer",
+  "robot-future",
+  "civfolio",
+  "busters-td",
+  "localtalker",
+  "popcurrent",
+  "character-chat",
+  "polylogue",
+  "otisfuse",
+  "slopswapper",
 ] as const;
 
 async function openWorldMap(
@@ -20,6 +35,9 @@ async function openWorldMap(
     introFinalMs?: number;
     creatorPromptDelayMs?: number;
     creatorPromptLifetimeMs?: number;
+    worldEventMinMs?: number;
+    worldEventMaxMs?: number;
+    worldEventDurationMs?: number;
   },
 ) {
   if (options?.fastIntro || options?.introStepMs || options?.introFinalMs) {
@@ -50,6 +68,19 @@ async function openWorldMap(
       { delay: delayMs, lifetime: lifetimeMs },
     );
   }
+  if (options?.worldEventMinMs || options?.worldEventMaxMs || options?.worldEventDurationMs) {
+    const minMs = options.worldEventMinMs ?? 420;
+    const maxMs = options.worldEventMaxMs ?? minMs;
+    const durationMs = options.worldEventDurationMs ?? 4_000;
+    await page.addInitScript(
+      ({ min, max, duration }) => {
+        window.__CIVFOLIO_WORLD_EVENT_MIN_MS = min;
+        window.__CIVFOLIO_WORLD_EVENT_MAX_MS = max;
+        window.__CIVFOLIO_WORLD_EVENT_DURATION_MS = duration;
+      },
+      { min: minMs, max: maxMs, duration: durationMs },
+    );
+  }
   await page.goto("/", { waitUntil: "networkidle" }).catch(async (error) => {
     const message = error instanceof Error ? error.message : String(error);
     if (!message.includes("ERR_CONNECTION_FAILED")) {
@@ -71,6 +102,19 @@ async function pressAction(page: Page, label: string) {
     }
     button.click();
   }, label);
+}
+
+async function allowMediaPlayback(page: Page) {
+  await page.addInitScript(() => {
+    Object.defineProperty(HTMLMediaElement.prototype, "play", {
+      configurable: true,
+      value: () => Promise.resolve(),
+    });
+    Object.defineProperty(HTMLMediaElement.prototype, "pause", {
+      configurable: true,
+      value: () => undefined,
+    });
+  });
 }
 
 async function skipIntro(page: Page) {
@@ -149,6 +193,10 @@ async function setTimelineIndex(page: Page, index: number) {
 
 async function collectIntroTitles(page: Page, expectedTitles: readonly string[]) {
   const seen = new Set<string>();
+  const initialText = await page.getByTestId("intro-title").textContent().catch(() => null);
+  if (initialText) {
+    seen.add(initialText);
+  }
 
   await expect
     .poll(
@@ -173,7 +221,7 @@ test.describe("world map interactions", () => {
     await openWorldMap(page, { introStepMs: 900, introFinalMs: 500 });
 
     await expect(page.getByTestId("intro-panel")).toBeVisible();
-    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Software Engineering");
+    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Support Engineer");
 
     const seenTitles = await collectIntroTitles(page, INTRO_TITLES);
     expect(seenTitles).toEqual(INTRO_TITLES);
@@ -193,8 +241,41 @@ test.describe("world map interactions", () => {
       .poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getCityMetrics("polylogue") ?? null))
       .toBeNull();
     await expect
+      .poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getCityMetrics("ibm-ai-machine-learning-engineer") ?? null))
+      .toBeNull();
+    await expect
       .poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getCityMetrics("otisfuse") ?? null))
       .toBeNull();
+  });
+
+  test("intro keeps previously founded cities visible across timeline jumps", async ({ page }) => {
+    await openWorldMap(page, { introStepMs: 1100, introFinalMs: 500 });
+
+    await expect
+      .poll(async () => page.getByTestId("intro-title").textContent().catch(() => null))
+      .toBe("Founding LocalTalker");
+    await expect
+      .poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getCityMetrics("localtalker") ?? null))
+      .not.toBeNull();
+
+    await expect
+      .poll(async () => page.getByTestId("intro-title").textContent().catch(() => null))
+      .toBe("Founding PopCurrent");
+
+    for (const slug of ["ibm-support-engineer", "busters-td", "localtalker"] as const) {
+      await expect
+        .poll(async () => page.evaluate((citySlug) => window.__CIVFOLIO_MAP_TEST__?.getCityMetrics(citySlug) ?? null, slug))
+        .not.toBeNull();
+    }
+  });
+
+  test("ambient music remains on after the intro ends when playback is allowed", async ({ page }) => {
+    await allowMediaPlayback(page);
+    await openWorldMap(page, { fastIntro: true });
+
+    await skipIntro(page);
+
+    await expect(page.getByRole("button", { name: "Ambient music on" })).toBeVisible();
   });
 
   test("intro runs through the full city sequence and can be replayed", async ({ page }) => {
@@ -204,7 +285,7 @@ test.describe("world map interactions", () => {
     await expect(page.getByRole("button", { name: "Replay Intro" })).toHaveCount(0);
     await skipIntro(page);
     await pressAction(page, "Replay Intro");
-    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Software Engineering");
+    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Support Engineer");
 
     await collectIntroTitles(page, INTRO_TITLES);
 
@@ -212,12 +293,13 @@ test.describe("world map interactions", () => {
     await expect(page.locator("body")).toContainText(/Time progression\s*2026/i);
 
     await pressAction(page, "Replay Intro");
-    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Software Engineering");
+    await expect(page.getByTestId("intro-title")).toHaveText("Founding IBM Support Engineer");
     await skipIntro(page);
     await expect(page.locator("body")).toContainText(/Time progression\s*2026/i);
 
     await expect.poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getCityMetrics("robot-future"))).not.toBeNull();
-    await expect.poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getCityMetrics("ibm-support-innovation"))).not.toBeNull();
+    await expect.poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getCityMetrics("ibm-support-engineer"))).not.toBeNull();
+    await expect.poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getCityMetrics("ibm-ai-machine-learning-engineer"))).not.toBeNull();
   });
 
   test("leader profile and map key can open from the HUD", async ({ page }) => {
@@ -227,7 +309,7 @@ test.describe("world map interactions", () => {
     await pressAction(page, "Leader Profile");
     await expect(page.getByRole("heading", { name: "Phil Lopez", exact: true })).toBeVisible();
     await expect(page.getByText("Founding Principles")).toBeVisible();
-    await expect(page.getByText("Current office: IBM Software Engineer")).toBeVisible();
+    await expect(page.getByText("Current office: IBM AI and Machine Learning Engineer")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByText("Founding Principles")).toHaveCount(0);
 
@@ -251,10 +333,13 @@ test.describe("world map interactions", () => {
     await expect(page).toHaveURL(/work=robot-future/);
     await expect(page.getByText("City Management View")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Robot Future" })).toBeVisible();
+    await expect(page.getByAltText("A screenshot of the Robot Future website.")).toBeVisible();
     await expect(page.getByRole("link", { name: "Open full dossier" })).toHaveAttribute(
       "href",
       "/work/robot-future",
     );
+    await expect(page.getByText("Why it matters")).toBeVisible();
+    await expect(page.getByText("Future-Tech Beacon")).toBeVisible();
 
     await page.getByRole("button", { name: "Close" }).click();
     await expect(page).not.toHaveURL(/work=/);
@@ -288,6 +373,37 @@ test.describe("world map interactions", () => {
     await expect(page.getByRole("link", { name: "Civilopedia" })).toHaveAttribute("href", "/archive");
     await page.goto("/archive", { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: "Browse the empire without the fog." })).toBeVisible();
+  });
+
+  test("default map route layer stays restrained after the city graph loads", async ({ page }) => {
+    await openWorldMap(page);
+
+    await skipIntro(page);
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getDebug().cityCount ?? 0))
+      .toBe(11);
+    const routeDebug = await page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getDebug() ?? null);
+
+    expect(routeDebug?.routeCount ?? 0).toBeGreaterThan(0);
+    expect(routeDebug?.routeCount ?? 0).toBeLessThanOrEqual(16);
+    expect(routeDebug?.routePathCount ?? 0).toBe((routeDebug?.routeCount ?? 0) * 2);
+  });
+
+  test("city pitch popups keep previews and dossier links for every visible city", async ({ browser }) => {
+    const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+    await openWorldMap(page);
+
+    await skipIntro(page);
+
+    for (const slug of CITY_SLUGS) {
+      await page.evaluate((citySlug) => window.__CIVFOLIO_MAP_TEST__?.openCity(citySlug), slug);
+      await expect(page.getByTestId("city-popup-body")).toBeVisible();
+      await expect(page.getByTestId("city-popup-body").locator("img").first()).toBeVisible();
+      await expect(page.getByRole("link", { name: "Open full dossier" })).toBeVisible();
+    }
+
+    await page.close();
   });
 
   test("civilopedia navigation does not throw on map teardown", async ({ page }) => {
@@ -452,6 +568,23 @@ test.describe("world map interactions", () => {
     await expect(prompt).toHaveCount(0);
   });
 
+  test("world events appear on the live map and anchor to a visible city", async ({ page }) => {
+    await openWorldMap(page, {
+      worldEventMinMs: 250,
+      worldEventMaxMs: 250,
+      worldEventDurationMs: 3_500,
+    });
+
+    await skipIntro(page);
+
+    const eventCard = page.getByTestId("world-event-card");
+    const eventMarker = page.getByTestId("world-event-marker");
+    await expect(eventCard).toBeVisible({ timeout: 6_000 });
+    await expect(eventMarker).toBeVisible();
+    await expect(eventCard).toHaveAttribute("data-event-kind", /storm|battle|greatLeader|invention/);
+    await expect(eventMarker).toHaveAttribute("data-city-slug", /.+/);
+  });
+
   test("mobile layout keeps the map usable and primary controls reachable", async ({
     browser,
   }) => {
@@ -464,19 +597,215 @@ test.describe("world map interactions", () => {
       deviceScaleFactor: 3,
     });
 
-    await page.goto("/", { waitUntil: "networkidle" });
+    await openWorldMap(page);
     await expect(page.getByRole("link", { name: "Robot Future" })).toHaveCount(0);
+    await expect(page.getByTestId("mobile-hud")).toBeVisible();
     await expect(page.getByRole("button", { name: "Skip Intro" })).toBeVisible();
     await expect(page.getByLabel("Timeline slider")).toHaveCount(0);
     await page.getByRole("button", { name: "Skip Intro" }).click();
     await expect(page.getByTestId("intro-panel")).toHaveCount(0);
+    await expect(page.getByTestId("mobile-timeline-shell")).toBeVisible();
     await expect(page.getByLabel("Timeline slider")).toBeVisible();
-    await page.getByRole("button", { name: "Map Key" }).click();
+    await expect
+      .poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getDebug().camera?.zoom ?? 1))
+      .toBeLessThanOrEqual(0.56);
+    const mobileOverviewCities = await page.evaluate(() => {
+      const viewport = { width: window.innerWidth, height: window.innerHeight };
+      return ["robot-future", "localtalker", "busters-td"].map((slug) => ({
+        slug,
+        metrics: window.__CIVFOLIO_MAP_TEST__?.getCityMetrics(slug) ?? null,
+        viewport,
+      }));
+    });
+    mobileOverviewCities.forEach(({ metrics, viewport }) => {
+      expect(metrics?.x ?? -1).toBeGreaterThan(0);
+      expect(metrics?.x ?? viewport.width + 1).toBeLessThan(viewport.width);
+      expect(metrics?.y ?? -1).toBeGreaterThan(0);
+      expect(metrics?.y ?? viewport.height + 1).toBeLessThan(viewport.height);
+    });
+    const mobileGap = await page.evaluate(() => {
+      const top = document.querySelector("[data-testid='mobile-hud']")?.getBoundingClientRect();
+      const bottom = document.querySelector("[data-testid='mobile-timeline-shell']")?.getBoundingClientRect();
+      if (!top || !bottom) {
+        return null;
+      }
+      return {
+        topBottom: top.bottom,
+        bottomTop: bottom.top,
+        gap: bottom.top - top.bottom,
+      };
+    });
+    expect(mobileGap).not.toBeNull();
+    expect(mobileGap?.gap ?? 0).toBeGreaterThan(180);
+    const clearLaneHit = await page.evaluate((gap) => {
+      if (!gap) {
+        return null;
+      }
+      const y = gap.topBottom + gap.gap / 2;
+      const element = document.elementFromPoint(window.innerWidth / 2, y);
+      return {
+        tagName: element?.tagName ?? null,
+        isOverlayControl: Boolean(
+          element?.closest("button, a, input, textarea, select, [data-map-interactive='true']"),
+        ),
+      };
+    }, mobileGap);
+    expect(clearLaneHit).toEqual({ tagName: "CANVAS", isOverlayControl: false });
+
+    const beforeDrag = await getCityMetrics(page, "robot-future");
+    const dragY = (mobileGap?.topBottom ?? 0) + (mobileGap?.gap ?? 0) / 2;
+    await page.mouse.move(250, dragY);
+    await page.mouse.down();
+    await page.mouse.move(130, dragY + 18, { steps: 12 });
+    await page.mouse.up();
+    await page.waitForTimeout(250);
+    const afterDrag = await getCityMetrics(page, "robot-future");
+    expect(Math.abs(afterDrag.x - beforeDrag.x) + Math.abs(afterDrag.y - beforeDrag.y)).toBeGreaterThan(10);
+
+    await pressAction(page, "Controls");
+    await expect(page.getByTestId("mobile-controls-panel")).toBeVisible();
+    await pressAction(page, "Map Key");
     await expect(page.locator("body")).toContainText("Great Works are landmark achievements.");
     await page.getByRole("button", { name: "Close" }).click();
     await clickMapCity(page, "popcurrent");
     await expect(page.getByText("City Management View")).toBeVisible();
-    await expect(page.getByAltText("The PopCurrent social preview image from the live site.")).toBeVisible();
+    await expect(page.getByText("Why it matters")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open full dossier" })).toHaveAttribute(
+      "href",
+      "/work/popcurrent",
+    );
+    await page.close();
+  });
+
+  test("narrow mobile layout preserves a touchable map lane without overflowing controls", async ({
+    browser,
+  }) => {
+    const page = await browser.newPage({
+      viewport: { width: 320, height: 568 },
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+      isMobile: true,
+      hasTouch: true,
+      deviceScaleFactor: 2,
+    });
+
+    await openWorldMap(page);
+    await skipIntro(page);
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getDebug().camera?.zoom ?? 1))
+      .toBeLessThanOrEqual(0.52);
+    const narrowOverviewCities = await page.evaluate(() => {
+      const viewport = { width: window.innerWidth, height: window.innerHeight };
+      return ["robot-future", "localtalker"].map((slug) => ({
+        slug,
+        metrics: window.__CIVFOLIO_MAP_TEST__?.getCityMetrics(slug) ?? null,
+        viewport,
+      }));
+    });
+    narrowOverviewCities.forEach(({ metrics, viewport }) => {
+      expect(metrics?.x ?? -1).toBeGreaterThan(0);
+      expect(metrics?.x ?? viewport.width + 1).toBeLessThan(viewport.width);
+      expect(metrics?.y ?? -1).toBeGreaterThan(0);
+      expect(metrics?.y ?? viewport.height + 1).toBeLessThan(viewport.height);
+    });
+
+    const collapsedMetrics = await page.evaluate(() => {
+      const readBox = (selector: string) => {
+        const element = document.querySelector(selector);
+        if (!element) {
+          return null;
+        }
+        const box = element.getBoundingClientRect();
+        return {
+          top: box.top,
+          right: box.right,
+          bottom: box.bottom,
+          left: box.left,
+          width: box.width,
+          height: box.height,
+        };
+      };
+      const hud = readBox("[data-testid='mobile-hud']");
+      const timeline = readBox("[data-testid='mobile-timeline-shell']");
+      const map = readBox("[data-map-drag-surface='true']");
+      const canvas = readBox("canvas");
+      const hudOverflow = Array.from(document.querySelectorAll("[data-testid='mobile-hud'] button")).some((button) => {
+        const buttonBox = button.getBoundingClientRect();
+        return Boolean(hud && (buttonBox.left < hud.left || buttonBox.right > hud.right));
+      });
+      const laneY = hud && timeline ? hud.bottom + (timeline.top - hud.bottom) / 2 : 0;
+      const laneElement = document.elementFromPoint(window.innerWidth / 2, laneY);
+
+      return {
+        hud,
+        timeline,
+        map,
+        canvas,
+        hudOverflow,
+        gap: hud && timeline ? timeline.top - hud.bottom : null,
+        laneHit: {
+          tagName: laneElement?.tagName ?? null,
+          isOverlayControl: Boolean(
+            laneElement?.closest("button, a, input, textarea, select, [data-map-interactive='true']"),
+          ),
+        },
+      };
+    });
+
+    expect(collapsedMetrics.hud).not.toBeNull();
+    expect(collapsedMetrics.timeline).not.toBeNull();
+    expect(collapsedMetrics.map).not.toBeNull();
+    expect(collapsedMetrics.canvas).not.toBeNull();
+    expect(collapsedMetrics.hudOverflow).toBe(false);
+    expect(collapsedMetrics.map?.height ?? 0).toBeGreaterThan(480);
+    expect(collapsedMetrics.gap ?? 0).toBeGreaterThan(165);
+    expect(collapsedMetrics.laneHit).toEqual({ tagName: "CANVAS", isOverlayControl: false });
+
+    const beforeDrag = await getCityMetrics(page, "robot-future");
+    const dragY = (collapsedMetrics.hud?.bottom ?? 0) + (collapsedMetrics.gap ?? 0) / 2;
+    await page.mouse.move(160, dragY);
+    await page.mouse.down();
+    await page.mouse.move(78, dragY + 16, { steps: 10 });
+    await page.mouse.up();
+    await page.waitForTimeout(250);
+    const afterDrag = await getCityMetrics(page, "robot-future");
+    expect(Math.abs(afterDrag.x - beforeDrag.x) + Math.abs(afterDrag.y - beforeDrag.y)).toBeGreaterThan(10);
+
+    await pressAction(page, "Controls");
+    await expect(page.getByTestId("mobile-controls-panel")).toBeVisible();
+    const controlsMetrics = await page.evaluate(() => {
+      const hud = document.querySelector("[data-testid='mobile-hud']")?.getBoundingClientRect();
+      const timeline = document.querySelector("[data-testid='mobile-timeline-shell']")?.getBoundingClientRect();
+      const controls = document.querySelector("[data-testid='mobile-controls-panel']")?.getBoundingClientRect();
+      const overflow = Array.from(document.querySelectorAll("[data-testid='mobile-hud'] button")).some((button) => {
+        const box = button.getBoundingClientRect();
+        return Boolean(hud && (box.left < hud.left || box.right > hud.right));
+      });
+
+      return {
+        overflow,
+        gap: hud && timeline ? timeline.top - hud.bottom : null,
+        controlsHeight: controls?.height ?? null,
+      };
+    });
+    expect(controlsMetrics.overflow).toBe(false);
+    expect(controlsMetrics.gap ?? 0).toBeGreaterThan(120);
+    expect(controlsMetrics.controlsHeight ?? 0).toBeLessThan(140);
+
+    await page.getByRole("button", { name: "Open Timeline" }).click();
+    await expect(page.getByTestId("mobile-controls-panel")).toHaveCount(0);
+    const expandedTimelineMetrics = await page.evaluate(() => {
+      const hud = document.querySelector("[data-testid='mobile-hud']")?.getBoundingClientRect();
+      const timeline = document.querySelector("[data-testid='mobile-timeline-shell']")?.getBoundingClientRect();
+      return {
+        gap: hud && timeline ? timeline.top - hud.bottom : null,
+        timelineHeight: timeline?.height ?? null,
+      };
+    });
+    expect(expandedTimelineMetrics.gap ?? 0).toBeGreaterThan(110);
+    expect(expandedTimelineMetrics.timelineHeight ?? 0).toBeLessThan(240);
+
     await page.close();
   });
 });
@@ -496,7 +825,7 @@ test.describe("canonical routes", () => {
   test("archive can navigate into a canonical dossier page", async ({ page }) => {
     await page.goto("/archive", { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: "Browse the empire without the fog." })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Open dossier" })).toHaveCount(10);
+    await expect(page.getByRole("link", { name: "Open dossier" })).toHaveCount(11);
 
     await page.getByRole("link", { name: "Open dossier" }).first().click();
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -508,7 +837,16 @@ test.describe("canonical routes", () => {
     await expect(page.getByRole("heading", { name: "Phil Lopez" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Signals" })).toBeVisible();
     await expect(page.getByRole("main").getByRole("link", { name: "GitHub" })).toBeVisible();
-    await expect(page.getByText("Current role: IBM Software Engineer")).toBeVisible();
+    await expect(page.getByText("Current role: IBM AI and Machine Learning Engineer")).toBeVisible();
+    await expect(page.getByLabel("Robot Future attribution")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Robot Future site" })).toHaveAttribute(
+      "href",
+      "https://www.robot-future.com/",
+    );
+    await expect(page.getByRole("link", { name: "CivFolio source" })).toHaveAttribute(
+      "href",
+      "https://github.com/BigOtis/CivFolio",
+    );
   });
 
   test("work routes remain shareable", async ({ page }) => {

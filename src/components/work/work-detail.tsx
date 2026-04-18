@@ -90,6 +90,127 @@ export function WorkDetail({
   const facet =
     work.code ?? work.art ?? work.music ?? work.video ?? work.writing ?? work.client;
   const compact = mode === "panel";
+  const compactProof = work.greatWorks.slice(0, 2);
+  const compactChips = Array.from(
+    new Set([
+      ...work.techTree.slice(0, 5),
+      ...work.tradeRoutes.slice(0, 3),
+      ...work.wonders.slice(0, 2),
+    ]),
+  ).slice(0, 9);
+
+  if (compact) {
+    const hero = work.media[0];
+
+    return (
+      <article className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-[var(--muted)]">
+          <span className="rounded-full border border-white/10 px-2.5 py-1">
+            {formatDisciplineLabel(work.discipline)}
+          </span>
+          <span className="rounded-full border border-white/10 px-2.5 py-1">{work.era}</span>
+          {cityLevel ? (
+            <span className="rounded-full border border-[var(--accent)] px-2.5 py-1 text-[var(--accent-strong)]">
+              {formatDisplayLabel(cityLevel)}
+            </span>
+          ) : null}
+          <span className="rounded-full border border-white/10 px-2.5 py-1">{work.startYear}</span>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-[1.15fr_0.85fr]">
+          <div className="space-y-3">
+            <section className="space-y-2 text-[13px] leading-6 text-[var(--muted-soft)]">
+              {work.description.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+            </section>
+
+            <section className="grid gap-2">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-[var(--accent-strong)]">
+                Why it matters
+              </div>
+              {work.highlights.slice(0, 2).map((item) => (
+                <div
+                  key={item}
+                  className="rounded-[14px] border border-white/10 bg-[rgba(255,255,255,0.045)] px-3 py-2 text-[13px] leading-5 text-[var(--muted-soft)]"
+                  style={{ display: "-webkit-box", overflow: "hidden", WebkitBoxOrient: "vertical", WebkitLineClamp: 2 }}
+                >
+                  {item}
+                </div>
+              ))}
+            </section>
+          </div>
+
+          <div className="space-y-3">
+            {hero ? (
+              <figure className="overflow-hidden rounded-[18px] border border-[rgba(244,211,141,0.18)] bg-black/20">
+                <Image
+                  src={hero.src}
+                  alt={hero.alt}
+                  width={900}
+                  height={540}
+                  className="h-36 w-full object-cover object-center"
+                  loading="eager"
+                  unoptimized
+                />
+              </figure>
+            ) : null}
+
+            {compactProof.length > 0 ? (
+              <section className="grid gap-2">
+                <div className="text-[10px] uppercase tracking-[0.22em] text-[var(--accent-strong)]">
+                  Proof
+                </div>
+                {compactProof.map((item) => (
+                  <div key={item.title} className="rounded-[14px] border border-[rgba(244,211,141,0.18)] bg-black/20 px-3 py-2">
+                    <div className="text-sm leading-5 text-[var(--parchment)]">{item.title}</div>
+                    <div
+                      className="mt-0.5 text-[11px] leading-4 text-[var(--muted-soft)]"
+                      style={{ display: "-webkit-box", overflow: "hidden", WebkitBoxOrient: "vertical", WebkitLineClamp: 1 }}
+                    >
+                      {item.summary}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            ) : null}
+
+            <section className="flex flex-wrap gap-1.5">
+              {compactChips.slice(0, 5).map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] leading-5 text-[var(--muted-soft)]"
+                >
+                  {item}
+                </span>
+              ))}
+            </section>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          {work.links.slice(0, 2).map((link) => (
+            <a
+              key={link.url}
+              href={link.url}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] px-3.5 py-2 text-sm text-[var(--accent-strong)] transition hover:bg-[rgba(244,211,141,0.16)]"
+            >
+              {link.label}
+            </a>
+          ))}
+          <Link
+            href={`/work/${work.slug}`}
+            className="rounded-full border border-white/10 px-3.5 py-2 text-sm text-[var(--muted-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
+          >
+            Open full dossier
+          </Link>
+        </div>
+      </article>
+    );
+  }
+
   const hero = work.media[0];
   const gallery = work.media.slice(1);
   const surfaceClass = compact

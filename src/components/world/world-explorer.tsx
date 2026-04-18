@@ -22,7 +22,7 @@ import {
   worldPointToLocalPoint,
   zoomCameraAtPoint,
 } from "@/components/world/world-camera";
-import type { WorldRenderModel } from "@/lib/content/derive";
+import type { WorldRenderModel, WorldRoute, WorldState } from "@/lib/content/derive";
 import type { GithubCache, LeaderProfile, SiteConfig, Work } from "@/lib/content/schema";
 import { cn, formatDisciplineLabel, formatDisplayLabel } from "@/lib/utils";
 
@@ -47,12 +47,212 @@ const initialCamera: CameraState = {
   y: 30,
 };
 
+function getDefaultCamera({
+  isMobile,
+  viewport,
+  world,
+}: {
+  isMobile: boolean;
+  viewport: { width: number; height: number };
+  world: { width: number; height: number };
+}): CameraState {
+  if (!isMobile || viewport.width <= 1 || viewport.height <= 1) {
+    return initialCamera;
+  }
+
+  const overviewZoom = clamp(
+    Math.min(((viewport.width - 24) / world.width) * 1.18, (viewport.height * 0.54) / world.height),
+    0.38,
+    0.54,
+  );
+
+  return {
+    zoom: overviewZoom,
+    x: viewport.width * 0.5 - world.width * overviewZoom * 0.5,
+    y: viewport.height * 0.43 - world.height * overviewZoom * 0.5,
+  };
+}
+
+type WorldEventKind = "storm" | "battle" | "greatLeader" | "invention";
+
+type WorldEvent = {
+  id: string;
+  kind: WorldEventKind;
+  citySlug: string;
+  cityTitle: string;
+  targetCitySlug?: string;
+  targetCityTitle?: string;
+  title: string;
+  detail: string;
+  accent: string;
+  badge: string;
+  markerLabel: string;
+};
+
+const worldEventTheme: Record<
+  WorldEventKind,
+  { accent: string; badge: string; markerLabel: string }
+> = {
+  storm: { accent: "#86a2a3", badge: "Weather", markerLabel: "Storm Front" },
+  battle: { accent: "#d59750", badge: "Conflict", markerLabel: "Battle" },
+  greatLeader: { accent: "#f4d38d", badge: "Leader", markerLabel: "Great Leader" },
+  invention: { accent: "#95dab7", badge: "Breakthrough", markerLabel: "Invention" },
+};
+
+function chooseRandomItem<T>(items: T[]) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return items[Math.floor(Math.random() * items.length)] ?? null;
+}
+
+function buildWorldEvent({
+  eventId,
+  cities,
+  routes,
+}: {
+  eventId: number;
+  cities: WorldRenderModel["states"][number]["cities"];
+  routes: WorldRenderModel["states"][number]["routes"];
+}) {
+  if (cities.length === 0) {
+    return null;
+  }
+
+  const cityTitles = new Map(cities.map((city) => [city.slug, city.title]));
+  const routeMap = new Map<string, string[]>();
+
+  routes.forEach((route) => {
+    if (!cityTitles.has(route.from) || !cityTitles.has(route.to)) {
+      return;
+    }
+    routeMap.set(route.from, [...(routeMap.get(route.from) ?? []), route.to]);
+    routeMap.set(route.to, [...(routeMap.get(route.to) ?? []), route.from]);
+  });
+
+  const battleCities = cities.filter((city) => (routeMap.get(city.slug)?.length ?? 0) > 0);
+  const availableKinds: WorldEventKind[] = battleCities.length
+    ? ["storm", "battle", "greatLeader", "invention"]
+    : ["storm", "greatLeader", "invention"];
+  const kind = chooseRandomItem(availableKinds);
+  if (!kind) {
+    return null;
+  }
+
+  const theme = worldEventTheme[kind];
+  const sourceCity = chooseRandomItem(kind === "battle" ? battleCities : cities);
+  if (!sourceCity) {
+    return null;
+  }
+
+  if (kind === "storm") {
+    return {
+      id: `world-event-${eventId}`,
+      kind,
+      citySlug: sourceCity.slug,
+      cityTitle: sourceCity.title,
+      title: `Storm Over ${sourceCity.title}`,
+      detail: `A sudden front is rolling across ${sourceCity.title}, slowing routes and throwing the frontier into rough weather.`,
+      accent: theme.accent,
+      badge: theme.badge,
+      markerLabel: theme.markerLabel,
+    } satisfies WorldEvent;
+  }
+
+  if (kind === "battle") {
+    const targetSlug = chooseRandomItem(routeMap.get(sourceCity.slug) ?? []);
+    const targetCityTitle = targetSlug ? cityTitles.get(targetSlug) : null;
+    return {
+      id: `world-event-${eventId}`,
+      kind,
+      citySlug: sourceCity.slug,
+      cityTitle: sourceCity.title,
+      targetCitySlug: targetSlug ?? undefined,
+      targetCityTitle: targetCityTitle ?? undefined,
+      title: targetCityTitle
+        ? `Skirmish Between ${sourceCity.title} and ${targetCityTitle}`
+        : `Border Clash Near ${sourceCity.title}`,
+      detail: targetCityTitle
+        ? `Scouts report a brief clash on the road between ${sourceCity.title} and ${targetCityTitle}.`
+        : `Scouts report a brief clash on the roads outside ${sourceCity.title}.`,
+      accent: theme.accent,
+      badge: theme.badge,
+      markerLabel: theme.markerLabel,
+    } satisfies WorldEvent;
+  }
+
+  if (kind === "greatLeader") {
+    return {
+      id: `world-event-${eventId}`,
+      kind,
+      citySlug: sourceCity.slug,
+      cityTitle: sourceCity.title,
+      title: `Great Leader Rises in ${sourceCity.title}`,
+      detail: `${sourceCity.title} has rallied around a new leader, boosting morale, output, and ambition across the district.`,
+      accent: theme.accent,
+      badge: theme.badge,
+      markerLabel: theme.markerLabel,
+    } satisfies WorldEvent;
+  }
+
+  return {
+    id: `world-event-${eventId}`,
+    kind,
+    citySlug: sourceCity.slug,
+    cityTitle: sourceCity.title,
+    title: `New Invention at ${sourceCity.title}`,
+    detail: `Makers in ${sourceCity.title} have unveiled a fresh breakthrough, pushing the local tech tree forward.`,
+    accent: theme.accent,
+    badge: theme.badge,
+    markerLabel: theme.markerLabel,
+  } satisfies WorldEvent;
+}
+
+function buildIntroMapState({
+  currentState,
+  foundedSlugs,
+  world,
+}: {
+  currentState: WorldState;
+  foundedSlugs: Set<string>;
+  world: WorldRenderModel;
+}): WorldState {
+  const foundedCities = new Map<string, WorldState["cities"][number]>();
+  const foundedRoutes = new Map<string, WorldRoute>();
+
+  world.years.forEach((year) => {
+    const state = world.states[year];
+
+    state.cities.forEach((city) => {
+      if (foundedSlugs.has(city.slug) && !foundedCities.has(city.slug)) {
+        foundedCities.set(city.slug, city);
+      }
+    });
+
+    state.routes.forEach((route) => {
+      if (foundedSlugs.has(route.from) && foundedSlugs.has(route.to) && !foundedRoutes.has(route.id)) {
+        foundedRoutes.set(route.id, route);
+      }
+    });
+  });
+
+  return {
+    ...currentState,
+    cities: [...foundedCities.values()].sort((left, right) => left.radius - right.radius),
+    routes: [...foundedRoutes.values()],
+  };
+}
+
 declare global {
   interface Window {
     __CIVFOLIO_INTRO_STEP_MS?: number;
     __CIVFOLIO_INTRO_FINAL_MS?: number;
     __CIVFOLIO_CREATOR_PROMPT_DELAY_MS?: number;
     __CIVFOLIO_CREATOR_PROMPT_LIFETIME_MS?: number;
+    __CIVFOLIO_WORLD_EVENT_MIN_MS?: number;
+    __CIVFOLIO_WORLD_EVENT_MAX_MS?: number;
+    __CIVFOLIO_WORLD_EVENT_DURATION_MS?: number;
   }
 }
 
@@ -75,10 +275,21 @@ export function WorldExplorer({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const cameraTargetRef = useRef<CameraState>(initialCamera);
   const cameraFrameRef = useRef<number | null>(null);
+  const appliedCameraModeRef = useRef<string | null>(null);
   const isDraggingRef = useRef(false);
   const introCancelledRef = useRef(false);
   const introTimeoutRef = useRef<number | null>(null);
   const introCueKeyRef = useRef<string | null>(null);
+  const introActiveRef = useRef(site.scene.introEnabled);
+  const introPanelVisibleRef = useRef(false);
+  const worldEventCueRef = useRef<string | null>(null);
+  const worldEventNonceRef = useRef(0);
+  const worldEventContextRef = useRef({
+    currentState: world.states[world.years[world.years.length - 1]],
+    visibleCities: [] as typeof world.states[number]["cities"],
+    camera: initialCamera,
+    containerSize: { width: 1200, height: 840 },
+  });
   const selectionSourceRef = useRef<"map" | "route">("route");
   const [selectedYear, setSelectedYear] = useState(world.years[world.years.length - 1]);
   const [filter, setFilter] = useState<Work["discipline"] | "all">("all");
@@ -100,9 +311,13 @@ export function WorldExplorer({
   const [introIndex, setIntroIndex] = useState(0);
   const [showLeader, setShowLeader] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
+  const [showMobileControls, setShowMobileControls] = useState(false);
+  const [showMobileTimelineDetails, setShowMobileTimelineDetails] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showCreatorPrompt, setShowCreatorPrompt] = useState(false);
+  const [activeWorldEvent, setActiveWorldEvent] = useState<WorldEvent | null>(null);
   const audio = useWorldAudio(site.audio);
+  const { playIntroCue, playIntroTransition, playWorldEventCue } = audio;
   const isTablet = containerSize.width < 1100;
   const isMobile = containerSize.width < 760;
   const isShort = containerSize.height < 760;
@@ -209,17 +424,19 @@ export function WorldExplorer({
       return currentState;
     }
 
-    return {
-      ...currentState,
-      cities: currentState.cities.filter((city) => introFoundedSlugs.has(city.slug)),
-      routes: currentState.routes.filter(
-        (route) => introFoundedSlugs.has(route.from) && introFoundedSlugs.has(route.to),
-      ),
-    };
-  }, [currentState, introFoundedSlugs]);
+    return buildIntroMapState({
+      currentState,
+      foundedSlugs: introFoundedSlugs,
+      world,
+    });
+  }, [currentState, introFoundedSlugs, world]);
   const visibleCities = useMemo(
     () => mapState.cities.filter((city) => filter === "all" || city.discipline === filter),
     [filter, mapState.cities],
+  );
+  const minimapRoutes = useMemo(
+    () => mapState.routes.filter((route) => route.type !== "inspiration"),
+    [mapState.routes],
   );
   const currentIntroWork = introSequence[Math.min(introIndex, Math.max(introSequence.length - 1, 0))];
   const introFocusSlug = introActive && currentIntroWork ? currentIntroWork.slug : null;
@@ -242,12 +459,31 @@ export function WorldExplorer({
     selectedWorkPanel.retained?.code?.repo &&
     github.repos[`${selectedWorkPanel.retained.code.repo.owner}/${selectedWorkPanel.retained.code.repo.name}`];
   const introProgress = introSequence.length > 0 ? (introIndex + 1) / introSequence.length : 0;
+  const activeEventCity = activeWorldEvent
+    ? currentState.cities.find((city) => city.slug === activeWorldEvent.citySlug) ?? null
+    : null;
   const viewportSize = useMemo(
     () => ({
       width: Math.max(1, containerSize.width),
       height: Math.max(1, containerSize.height),
     }),
     [containerSize.height, containerSize.width],
+  );
+  const defaultCamera = useMemo(
+    () =>
+      getDefaultCamera({
+        isMobile,
+        viewport: viewportSize,
+        world: { width: world.width, height: world.height },
+      }),
+    [isMobile, viewportSize, world.height, world.width],
+  );
+  const cameraZoomLimits = useMemo(
+    () => ({
+      min: isMobile ? 0.38 : 0.58,
+      max: 1.52,
+    }),
+    [isMobile],
   );
   const terrainAtPoint = useCallback((x: number, y: number) => {
     return world.hexes.reduce<{ terrain: (typeof world.hexes)[number]["terrain"]; distance: number }>(
@@ -264,6 +500,23 @@ export function WorldExplorer({
   function clampCameraToWorld(next: CameraState) {
     return clampCameraToViewport(next, viewportSize, { width: world.width, height: world.height });
   }
+
+  useEffect(() => {
+    if (containerSize.width <= 1 || containerSize.height <= 1) {
+      return;
+    }
+
+    const mode = isMobile ? "mobile" : "desktop";
+    if (appliedCameraModeRef.current === mode) {
+      return;
+    }
+
+    appliedCameraModeRef.current = mode;
+    const clamped = clampCameraToViewport(defaultCamera, viewportSize, { width: world.width, height: world.height });
+    cameraTargetRef.current = clamped;
+    setCamera(clamped);
+    setCameraMotionToken((value) => value + 1);
+  }, [containerSize.height, containerSize.width, defaultCamera, isMobile, viewportSize, world.height, world.width]);
 
   function setCameraTarget(
     next:
@@ -284,7 +537,7 @@ export function WorldExplorer({
     immediate = false,
   ) {
     const next = clampCameraToWorld(
-      zoomCameraAtPoint(cameraTargetRef.current, delta, { x: anchorX, y: anchorY }),
+      zoomCameraAtPoint(cameraTargetRef.current, delta, { x: anchorX, y: anchorY }, cameraZoomLimits),
     );
     cameraTargetRef.current = next;
     if (immediate) {
@@ -317,9 +570,12 @@ export function WorldExplorer({
     introCancelledRef.current = false;
     introCueKeyRef.current = null;
     setShowLeader(false);
+    setShowLegend(false);
+    setShowMobileControls(false);
+    setShowMobileTimelineDetails(false);
     setFilter("all");
     setIntroIndex(0);
-    setCameraTarget(initialCamera);
+    setCameraTarget(defaultCamera);
     updateWorkInRoute();
     setIntroActive(true);
   }
@@ -331,7 +587,10 @@ export function WorldExplorer({
     }
     introCancelledRef.current = true;
     introCueKeyRef.current = null;
+    setShowMobileControls(false);
+    setShowMobileTimelineDetails(false);
     setSelectedYear(latestYear);
+    setCameraTarget(defaultCamera);
     setIntroActive(false);
   }
 
@@ -340,12 +599,18 @@ export function WorldExplorer({
     audio.playUiClick("city");
     stopIntro();
     setShowLeader(false);
+    setShowLegend(false);
+    setShowMobileControls(false);
+    setShowMobileTimelineDetails(false);
     updateWorkInRoute(slug);
   }
 
   function closePanels() {
     audio.playUiClick("close");
     setShowLeader(false);
+    setShowLegend(false);
+    setShowMobileControls(false);
+    setShowMobileTimelineDetails(false);
     clearSelectedUnit();
     updateWorkInRoute();
   }
@@ -368,7 +633,9 @@ export function WorldExplorer({
 
   function focusPointForIntro(x: number, y: number) {
     const current = cameraTargetRef.current;
-    const introZoom = clamp(Math.max(current.zoom, isMobile ? 0.96 : 1.02), 0.72, 1.18);
+    const introZoom = isMobile
+      ? clamp(Math.max(current.zoom, 0.58), 0.46, 0.78)
+      : clamp(Math.max(current.zoom, 1.02), 0.72, 1.18);
     const viewportWidth = viewportSize.width;
     const viewportHeight = viewportSize.height;
     const desiredX = viewportWidth * 0.5 - x * introZoom;
@@ -384,7 +651,7 @@ export function WorldExplorer({
   function resetView() {
     audio.playUiClick("toggle");
     stopIntro();
-    setCameraTarget(initialCamera);
+    setCameraTarget(defaultCamera);
   }
 
   function jumpToWorkYear(work: Work) {
@@ -397,12 +664,25 @@ export function WorldExplorer({
     return worldPointToLocalPoint({ x, y }, camera, viewportSize, containerSize);
   }
 
+  const activeEventScreenPoint = activeEventCity
+    ? worldPointToScreen(activeEventCity.x, activeEventCity.y)
+    : null;
+
   function clampCardPosition(x: number, y: number, width: number, height: number) {
     return {
       x: clamp(x, 12, containerSize.width - width),
       y: clamp(y, 12, containerSize.height - height),
     };
   }
+
+  useEffect(() => {
+    worldEventContextRef.current = {
+      currentState,
+      visibleCities,
+      camera,
+      containerSize,
+    };
+  }, [camera, containerSize, currentState, visibleCities]);
 
   function screenPointToWorld(clientX: number, clientY: number) {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -482,10 +762,114 @@ export function WorldExplorer({
   }, [selectedSlug, showLeader]);
 
   useEffect(() => {
+    if (!isMobile) {
+      setShowMobileControls(false);
+      setShowMobileTimelineDetails(false);
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (!introActive) {
+      return;
+    }
+
+    setActiveWorldEvent(null);
+  }, [introActive]);
+
+  useEffect(() => {
+    if (!activeWorldEvent) {
+      worldEventCueRef.current = null;
+      return;
+    }
+
+    const cityStillVisible = visibleCities.some((city) => city.slug === activeWorldEvent.citySlug);
+    if (!cityStillVisible) {
+      setActiveWorldEvent(null);
+    }
+  }, [activeWorldEvent, visibleCities]);
+
+  useEffect(() => {
     if (!introActive && introCancelledRef.current) {
       setSelectedYear(latestYear);
     }
   }, [introActive, latestYear]);
+
+  useEffect(() => {
+    if (introActive && !introActiveRef.current) {
+      playIntroCue("start");
+    }
+
+    introActiveRef.current = introActive;
+  }, [introActive, playIntroCue]);
+
+  useEffect(() => {
+    if (!introPanelVisible && introPanelVisibleRef.current) {
+      playIntroTransition();
+    }
+
+    introPanelVisibleRef.current = introPanelVisible;
+  }, [introPanelVisible, playIntroTransition]);
+
+  useEffect(() => {
+    if (introActive || activeWorldEvent || visibleCities.length === 0) {
+      return;
+    }
+
+    const minMs = window.__CIVFOLIO_WORLD_EVENT_MIN_MS ?? 150_000;
+    const maxMs = Math.max(minMs, window.__CIVFOLIO_WORLD_EVENT_MAX_MS ?? 270_000);
+    const delayMs = minMs + Math.random() * (maxMs - minMs);
+    const timeout = window.setTimeout(() => {
+      const latest = worldEventContextRef.current;
+      const candidateCities = latest.visibleCities.filter((city) => {
+        const point = worldPointToLocalPoint(
+          { x: city.x, y: city.y },
+          latest.camera,
+          {
+            width: Math.max(1, latest.containerSize.width),
+            height: Math.max(1, latest.containerSize.height),
+          },
+          latest.containerSize,
+        );
+
+        return (
+          point.x >= 72 &&
+          point.x <= latest.containerSize.width - 72 &&
+          point.y >= 110 &&
+          point.y <= latest.containerSize.height - 110
+        );
+      });
+
+      const nextEvent = buildWorldEvent({
+        eventId: ++worldEventNonceRef.current,
+        cities: candidateCities.length > 0 ? candidateCities : latest.visibleCities,
+        routes: latest.currentState.routes,
+      });
+
+      if (nextEvent) {
+        setActiveWorldEvent(nextEvent);
+      }
+    }, delayMs);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeWorldEvent, introActive, visibleCities.length]);
+
+  useEffect(() => {
+    if (!activeWorldEvent) {
+      return;
+    }
+
+    if (worldEventCueRef.current !== activeWorldEvent.id) {
+      playWorldEventCue(activeWorldEvent.kind);
+      worldEventCueRef.current = activeWorldEvent.id;
+    }
+
+    const durationMs = window.__CIVFOLIO_WORLD_EVENT_DURATION_MS ?? 18_000;
+    const timeout = window.setTimeout(() => {
+      setActiveWorldEvent((current) => (current?.id === activeWorldEvent.id ? null : current));
+    }, durationMs);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeWorldEvent, playWorldEventCue]);
 
   useEffect(() => {
     if (!introActive || introSequence.length === 0 || selectedSlug || showLeader) {
@@ -575,12 +959,12 @@ export function WorldExplorer({
   }, [containerSize.height, containerSize.width, pathname, router, searchParams]);
 
   return (
-    <section className="select-none px-3 pb-4 sm:px-4 lg:px-6">
+    <section className="select-none px-2 pb-2 sm:px-4 sm:pb-4 lg:px-6">
       <div
         ref={containerRef}
         data-map-drag-surface="true"
         className={cn(
-          "relative isolate min-h-[calc(100vh-6.75rem)] overflow-hidden rounded-[34px] border border-[rgba(244,211,141,0.18)] bg-[radial-gradient(circle_at_top,_rgba(70,120,160,0.28),_rgba(11,12,17,0.98)_56%)] shadow-[0_40px_120px_rgba(0,0,0,0.42)]",
+          "relative isolate min-h-[calc(100svh-4.75rem)] overflow-hidden rounded-[24px] border border-[rgba(244,211,141,0.18)] bg-[radial-gradient(circle_at_top,_rgba(70,120,160,0.28),_rgba(11,12,17,0.98)_56%)] shadow-[0_40px_120px_rgba(0,0,0,0.42)] sm:min-h-[calc(100vh-6.75rem)] sm:rounded-[34px]",
           isDragging ? "cursor-grabbing" : "cursor-grab",
         )}
       >
@@ -622,53 +1006,160 @@ export function WorldExplorer({
 
         <div
           className={cn(
-            "pointer-events-none absolute z-20 flex items-start justify-between gap-4",
-            isMobile ? "inset-x-3 top-3 flex-col gap-3" : "inset-x-4 top-4 flex-wrap",
+            "pointer-events-none absolute z-20",
+            isMobile ? "inset-x-2 top-2" : "inset-x-4 top-4 flex items-start justify-between gap-4 flex-wrap",
           )}
         >
+          {isMobile ? (
             <div
-              className={cn(
-                "hud-drift pointer-events-auto rounded-[26px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.64)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl",
-                isMobile
-                  ? "w-full max-w-none px-4 py-3"
-                  : isTablet
-                  ? "max-w-[28rem] px-5 py-4"
-                  : "max-w-[36rem] px-5 py-4",
-            )}
-          >
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="rounded-full border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] px-3 py-1 text-[10px] uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-                Living world portfolio
-              </span>
-              <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">
-                {currentState.label}
-              </span>
+              data-testid="mobile-hud"
+              className="hud-drift pointer-events-auto rounded-[18px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.72)] px-2.5 py-2 shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-1.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <span className="rounded-full border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] px-2 py-1 text-[8px] uppercase tracking-[0.14em] text-[var(--accent-strong)]">
+                    World Map
+                  </span>
+                  <span className="rounded-full border border-white/10 px-2 py-1 text-[8px] uppercase tracking-[0.12em] text-[var(--muted)]">
+                    {currentState.label}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <OverlayButton
+                    active={showLeader}
+                    aria-label="Leader Profile"
+                    onClick={() => {
+                      audio.playUiClick("button");
+                      stopIntro();
+                      setShowMobileControls(false);
+                      setShowLeader((value) => !value);
+                      updateWorkInRoute();
+                    }}
+                    className="min-h-8 px-2.5 py-1.5 text-[8px] tracking-[0.12em]"
+                  >
+                    Leader
+                  </OverlayButton>
+                  <OverlayButton
+                    active={showMobileControls}
+                    onClick={() => {
+                      audio.playUiClick("toggle");
+                      setShowMobileTimelineDetails(false);
+                      setShowMobileControls((value) => !value);
+                    }}
+                    className="min-h-8 px-2.5 py-1.5 text-[8px] tracking-[0.12em]"
+                  >
+                    Controls
+                  </OverlayButton>
+                </div>
+              </div>
+              <h1 className="mt-1.5 font-display text-[1.16rem] leading-none text-[var(--parchment)]">
+                {leader.name}
+                <span className="mt-0.5 block text-[8px] uppercase tracking-[0.12em] text-[var(--accent-strong)]">
+                  Strategy Map of Work
+                </span>
+              </h1>
+
+              {showMobileControls ? (
+                <div
+                  data-testid="mobile-controls-panel"
+                  className="mt-2 grid grid-cols-3 gap-1.5 border-t border-white/10 pt-2"
+                >
+                  <OverlayButton
+                    onClick={() => {
+                      audio.playUiClick("toggle");
+                      stopIntro();
+                      adjustZoom(-0.08);
+                    }}
+                    className="min-h-8 w-full px-2.5 py-1.5 text-[8px] tracking-[0.12em]"
+                  >
+                    -
+                  </OverlayButton>
+                  <OverlayButton
+                    onClick={() => {
+                      audio.playUiClick("toggle");
+                      stopIntro();
+                      adjustZoom(0.08);
+                    }}
+                    className="min-h-8 w-full px-2.5 py-1.5 text-[8px] tracking-[0.12em]"
+                  >
+                    +
+                  </OverlayButton>
+                  <OverlayButton onClick={resetView} className="min-h-8 w-full px-2.5 py-1.5 text-[8px] tracking-[0.12em]">Reset</OverlayButton>
+                  <OverlayButton
+                    onClick={() => {
+                      audio.playUiClick("toggle");
+                      void audio.toggleMusic();
+                    }}
+                    className="min-h-8 w-full px-2.5 py-1.5 text-[8px] tracking-[0.12em]"
+                  >
+                    {audio.status === "on"
+                      ? "Music on"
+                      : audio.status === "blocked"
+                        ? "Audio blocked"
+                        : "Music off"}
+                  </OverlayButton>
+                  <OverlayButton
+                    active={showLegend}
+                    onClick={() => {
+                      audio.playUiClick("toggle");
+                      stopIntro();
+                      setShowLegend((value) => !value);
+                    }}
+                    className="min-h-8 w-full px-2.5 py-1.5 text-[8px] tracking-[0.12em]"
+                  >
+                    Map Key
+                  </OverlayButton>
+                  {introActive ? null : (
+                    <OverlayButton
+                      onClick={() => {
+                        audio.playUiClick("button");
+                        startIntro();
+                      }}
+                      className="min-h-8 w-full px-2.5 py-1.5 text-[8px] tracking-[0.12em]"
+                    >
+                      Replay Intro
+                    </OverlayButton>
+                  )}
+                </div>
+              ) : null}
             </div>
-            <h1 className={cn("mt-3 font-display leading-[0.94] text-[var(--parchment)]", isMobile ? "text-[1.95rem]" : isTablet ? "text-5xl" : "text-6xl")}>
-              {leader.name}
-              <span className={cn("mt-2 block uppercase text-[var(--accent-strong)]", isMobile ? "text-[0.44em] leading-[1.12] tracking-[0.14em]" : "text-[0.5em] leading-[1.08] tracking-[0.18em]")}>
-                Strategy Map of Work
-              </span>
-            </h1>
-            {isMobile ? null : (
-              <p className={cn("mt-3 max-w-xl text-[var(--muted-soft)]", isTablet ? "text-sm leading-6" : "text-sm leading-7")}>
-                Pan, zoom, scrub time, and open cities to inspect the systems, products, and media work that built this world.
-              </p>
-            )}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <OverlayButton
-                active={showLeader}
-                onClick={() => {
-                  audio.playUiClick("button");
-                  stopIntro();
-                  setShowLeader((value) => !value);
-                  updateWorkInRoute();
-                }}
+          ) : (
+            <>
+              <div
+                className={cn(
+                  "hud-drift pointer-events-auto rounded-[26px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.64)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl",
+                  isTablet ? "max-w-[28rem] px-5 py-4" : "max-w-[36rem] px-5 py-4",
+                )}
               >
-                Leader Profile
-              </OverlayButton>
-              {isMobile ? null : (
-                <>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="rounded-full border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] px-3 py-1 text-[10px] uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+                    Living world portfolio
+                  </span>
+                  <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-[var(--muted)]">
+                    {currentState.label}
+                  </span>
+                </div>
+                <h1 className={cn("mt-3 font-display leading-[0.94] text-[var(--parchment)]", isTablet ? "text-5xl" : "text-6xl")}>
+                  {leader.name}
+                  <span className="mt-2 block uppercase text-[0.5em] leading-[1.08] tracking-[0.18em] text-[var(--accent-strong)]">
+                    Strategy Map of Work
+                  </span>
+                </h1>
+                <p className={cn("mt-3 max-w-xl text-[var(--muted-soft)]", isTablet ? "text-sm leading-6" : "text-sm leading-7")}>
+                  Pan, zoom, scrub time, and open cities to inspect the systems, products, and media work that built this world.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <OverlayButton
+                    active={showLeader}
+                    onClick={() => {
+                      audio.playUiClick("button");
+                      stopIntro();
+                      setShowLeader((value) => !value);
+                      updateWorkInRoute();
+                    }}
+                  >
+                    Leader Profile
+                  </OverlayButton>
                   <Link
                     href="/archive"
                     className="inline-flex min-h-10 items-center justify-center rounded-full border border-white/12 bg-[rgba(255,255,255,0.06)] px-4 py-2 text-[11px] uppercase tracking-[0.24em] text-[var(--muted-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
@@ -681,89 +1172,82 @@ export function WorldExplorer({
                   >
                     About
                   </Link>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className={cn("pointer-events-auto flex items-start justify-end gap-3", isMobile ? "w-full flex-wrap" : "flex-wrap")}>
-            {isMobile ? null : <StatChip label="Visible Cities" value={visibleCities.length} />}
-            {isMobile ? null : (
-              <StatChip
-                label="Map Focus"
-                value={filter === "all" ? "All" : formatDisciplineLabel(filter)}
-              />
-            )}
-            <div className={cn("rounded-[24px] border border-white/10 bg-[rgba(14,10,8,0.62)] p-2 shadow-[0_18px_45px_rgba(0,0,0,0.24)] backdrop-blur-xl", isMobile ? "w-full max-w-none" : "")}>
-              <div className={cn(isMobile ? "grid grid-cols-2 gap-2" : "flex flex-wrap gap-2")}>
-                <OverlayButton
-                  onClick={() => {
-                    audio.playUiClick("toggle");
-                    stopIntro();
-                    adjustZoom(-0.08);
-                  }}
-                  className={isMobile ? "w-full" : undefined}
-                >
-                  -
-                </OverlayButton>
-                <OverlayButton
-                  onClick={() => {
-                    audio.playUiClick("toggle");
-                    stopIntro();
-                    adjustZoom(0.08);
-                  }}
-                  className={isMobile ? "w-full" : undefined}
-                >
-                  +
-                </OverlayButton>
-                <OverlayButton onClick={resetView} className={isMobile ? "w-full" : undefined}>Reset</OverlayButton>
-                <OverlayButton
-                  onClick={() => {
-                    audio.playUiClick("toggle");
-                    void audio.toggleMusic();
-                  }}
-                  className={isMobile ? "w-full" : undefined}
-                >
-                  {audio.status === "on"
-                    ? `${site.audio.label} on`
-                    : audio.status === "blocked"
-                      ? "Audio blocked"
-                      : `${site.audio.label} off`}
-                </OverlayButton>
-                <OverlayButton
-                  active={showLegend}
-                  onClick={() => {
-                    audio.playUiClick("toggle");
-                    stopIntro();
-                    setShowLegend((value) => !value);
-                  }}
-                  className={isMobile ? "w-full px-3" : undefined}
-                >
-                  Map Key
-                </OverlayButton>
-                {introActive ? null : (
-                  <OverlayButton
-                    onClick={() => {
-                      audio.playUiClick("button");
-                      startIntro();
-                    }}
-                    className={isMobile ? "w-full" : undefined}
-                  >
-                    Replay Intro
-                  </OverlayButton>
-                )}
+                </div>
               </div>
-            </div>
-          </div>
+
+              <div className="pointer-events-auto flex items-start justify-end gap-3 flex-wrap">
+                <StatChip label="Visible Cities" value={visibleCities.length} />
+                <StatChip
+                  label="Map Focus"
+                  value={filter === "all" ? "All" : formatDisciplineLabel(filter)}
+                />
+                <div className="rounded-[24px] border border-white/10 bg-[rgba(14,10,8,0.62)] p-2 shadow-[0_18px_45px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+                  <div className="flex flex-wrap gap-2">
+                    <OverlayButton
+                      onClick={() => {
+                        audio.playUiClick("toggle");
+                        stopIntro();
+                        adjustZoom(-0.08);
+                      }}
+                    >
+                      -
+                    </OverlayButton>
+                    <OverlayButton
+                      onClick={() => {
+                        audio.playUiClick("toggle");
+                        stopIntro();
+                        adjustZoom(0.08);
+                      }}
+                    >
+                      +
+                    </OverlayButton>
+                    <OverlayButton onClick={resetView}>Reset</OverlayButton>
+                    <OverlayButton
+                      onClick={() => {
+                        audio.playUiClick("toggle");
+                        void audio.toggleMusic();
+                      }}
+                    >
+                      {audio.status === "on"
+                        ? `${site.audio.label} on`
+                        : audio.status === "blocked"
+                          ? "Audio blocked"
+                          : `${site.audio.label} off`}
+                    </OverlayButton>
+                    <OverlayButton
+                      active={showLegend}
+                      onClick={() => {
+                        audio.playUiClick("toggle");
+                        stopIntro();
+                        setShowLegend((value) => !value);
+                      }}
+                    >
+                      Map Key
+                    </OverlayButton>
+                    {introActive ? null : (
+                      <OverlayButton
+                        onClick={() => {
+                          audio.playUiClick("button");
+                          startIntro();
+                        }}
+                      >
+                        Replay Intro
+                      </OverlayButton>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {introPanelVisible && currentIntroWork ? (
-          <div className={cn("pointer-events-none absolute inset-x-4 z-20 flex justify-center", isMobile ? "bottom-4" : "top-28")}>
+          <div className={cn("pointer-events-none absolute z-20 flex justify-center", isMobile ? "inset-x-2 bottom-2" : "inset-x-4 top-28")}>
             <div
               data-testid="intro-panel"
               className={cn(
                 "panel-enter hud-drift rounded-[26px] border border-[rgba(244,211,141,0.18)] bg-[rgba(17,12,9,0.72)] text-center shadow-[0_24px_70px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
-                isMobile ? "w-full max-h-[min(30rem,calc(100vh-12rem))] overflow-y-auto overscroll-contain px-4 py-4" : "w-[min(30rem,100%)] px-5 py-4",
+                isMobile ? "w-full max-h-[min(28rem,calc(100svh-10rem))] overflow-y-auto overscroll-contain rounded-[20px] px-3 py-3" : "w-[min(30rem,100%)] px-5 py-4",
                 introActive
                   ? "pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0"
                   : "pointer-events-none opacity-0 -translate-y-3 scale-[0.985] blur-[2px]",
@@ -774,7 +1258,7 @@ export function WorldExplorer({
               </div>
               <div
                 data-testid="intro-title"
-                className={cn("mt-2 font-display text-[var(--parchment)]", isMobile ? "text-[2rem] leading-none" : "text-3xl")}
+                className={cn("mt-2 font-display text-[var(--parchment)]", isMobile ? "text-[1.6rem] leading-none" : "text-3xl")}
               >
                 Founding {currentIntroWork.title}
               </div>
@@ -809,70 +1293,198 @@ export function WorldExplorer({
           </div>
         ) : null}
 
+        {activeWorldEvent && activeEventScreenPoint ? (
+          <>
+            <div
+              data-testid="world-event-marker"
+              data-city-slug={activeWorldEvent.citySlug}
+              data-event-kind={activeWorldEvent.kind}
+              className="pointer-events-none absolute z-[24]"
+              style={{
+                left: clamp(activeEventScreenPoint.x - 56, 12, containerSize.width - 112),
+                top: clamp(activeEventScreenPoint.y - 88, 12, containerSize.height - 90),
+              }}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <div
+                  className="animate-pulse rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-[var(--parchment)] shadow-[0_12px_32px_rgba(0,0,0,0.28)]"
+                  style={{
+                    borderColor: `${activeWorldEvent.accent}aa`,
+                    background: "rgba(14,10,8,0.82)",
+                    boxShadow: `0 0 0 1px ${activeWorldEvent.accent}33`,
+                  }}
+                >
+                  {activeWorldEvent.markerLabel}
+                </div>
+                <div
+                  className="h-6 w-6 rounded-full border-2 shadow-[0_10px_22px_rgba(0,0,0,0.24)]"
+                  style={{
+                    borderColor: activeWorldEvent.accent,
+                    background: "rgba(16,11,9,0.88)",
+                    boxShadow: `0 0 0 8px ${activeWorldEvent.accent}1f`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div
+              data-testid="world-event-card"
+              data-city-slug={activeWorldEvent.citySlug}
+              data-event-kind={activeWorldEvent.kind}
+              className={cn(
+                "pointer-events-none absolute inset-x-4 z-[23] flex",
+                isMobile
+                  ? showMobileTimelineDetails
+                    ? "bottom-[12.5rem] justify-center"
+                    : "bottom-[7rem] justify-center"
+                  : "top-28 justify-center xl:justify-end",
+              )}
+            >
+              <div
+                className={cn(
+                  "panel-enter hud-drift rounded-[24px] border bg-[rgba(16,11,9,0.84)] px-4 py-4 text-[var(--muted-soft)] shadow-[0_24px_60px_rgba(0,0,0,0.34)] backdrop-blur-xl",
+                  isMobile ? "w-full max-w-[20rem] rounded-[18px] px-3 py-3" : "w-[min(25rem,100%)] xl:mr-2",
+                )}
+                style={{
+                  borderColor: `${activeWorldEvent.accent}55`,
+                  boxShadow: `0 0 0 1px ${activeWorldEvent.accent}22`,
+                }}
+              >
+                <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.24em]">
+                  <span style={{ color: activeWorldEvent.accent }}>World Event</span>
+                  <span className="rounded-full border border-white/10 px-2 py-1 text-[var(--muted)]">
+                    {activeWorldEvent.badge}
+                  </span>
+                  <span className="rounded-full border border-white/10 px-2 py-1 text-[var(--muted)]">
+                    {activeWorldEvent.cityTitle}
+                  </span>
+                </div>
+                <div className={cn("mt-3 font-display leading-none text-[var(--parchment)]", isMobile ? "text-[1.35rem]" : "text-[1.9rem]")}>
+                  {activeWorldEvent.title}
+                </div>
+                <p className={cn("mt-3 text-sm leading-6 text-[var(--muted-soft)]", isMobile ? "line-clamp-2 text-[12px] leading-5" : null)}>
+                  {activeWorldEvent.detail}
+                </p>
+              </div>
+            </div>
+          </>
+        ) : null}
+
         {showMobileTimeline ? (
           <div
             data-map-interactive="true"
+            data-testid={isMobile ? "mobile-timeline-shell" : undefined}
             className={cn(
               "absolute z-20 rounded-[28px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.68)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl",
               isMobile
-                ? "bottom-3 left-3 right-3 px-4 py-3"
+                ? "bottom-2 left-2 right-2 rounded-[20px] px-3 py-2"
                 : isTablet
                   ? "bottom-4 left-4 right-40 px-5 py-4"
                   : "bottom-4 left-4 max-w-[620px] px-5 py-4",
             )}
           >
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.28em] text-[var(--muted)]">Time progression</div>
-              <div className="mt-1 font-display text-3xl text-[var(--accent-strong)]">{selectedYear}</div>
-            </div>
-            <div className={cn("text-[var(--muted-soft)]", isMobile ? "max-w-full text-[13px] leading-5" : "text-sm leading-7")}>{currentState.description}</div>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={world.years.length - 1}
-            step={1}
-            value={world.years.indexOf(selectedYear)}
-            onChange={(event) => {
-              stopIntro();
-              setSelectedYear(world.years[Number(event.currentTarget.value)]);
-            }}
-            className="mt-4 w-full accent-[var(--accent)]"
-            aria-label="Timeline slider"
-          />
-          <div className="mt-3 flex justify-between text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">
-            {world.years.map((year) => (
-              <span key={year}>{year}</span>
-            ))}
-          </div>
-          <div className={cn("mt-4", isMobile ? "-mx-1 overflow-x-auto pb-1" : "")}>
-            <div className={cn("flex gap-2", isMobile ? "min-w-max px-1" : "flex-wrap")}>
-              {(["all", "code", "art", "music", "video", "writing", "client"] as const).map((discipline) => (
+            <div className={cn("flex items-start justify-between", isMobile ? "gap-2" : "flex-wrap gap-3")}>
+              <div>
+                <div className={cn("uppercase text-[var(--muted)]", isMobile ? "text-[8px] tracking-[0.14em]" : "text-[10px] tracking-[0.28em]")}>Time progression</div>
+                <div className={cn("mt-1 font-display text-[var(--accent-strong)]", isMobile ? "text-[2rem]" : "text-3xl")}>
+                  {selectedYear}
+                </div>
+              </div>
+              {isMobile ? (
                 <OverlayButton
-                  key={discipline}
-                  active={filter === discipline}
+                  active={showMobileTimelineDetails}
+                  aria-label={showMobileTimelineDetails ? "Hide Timeline" : "Open Timeline"}
                   onClick={() => {
                     audio.playUiClick("toggle");
-                    stopIntro();
-                    setFilter(discipline);
+                    setShowMobileControls(false);
+                    setShowMobileTimelineDetails((value) => !value);
                   }}
-                  className="px-3 py-1.5 text-[10px]"
+                  className="min-h-8 shrink-0 px-3 py-1.5 text-[8px] tracking-[0.12em]"
                 >
-                  {discipline === "all" ? "All" : formatDisplayLabel(discipline)}
+                  {showMobileTimelineDetails ? "Hide" : "Details"}
                 </OverlayButton>
-              ))}
+              ) : (
+                <div className="max-w-[26rem] text-sm leading-7 text-[var(--muted-soft)]">{currentState.description}</div>
+              )}
             </div>
-          </div>
+            <input
+              type="range"
+              min={0}
+              max={world.years.length - 1}
+              step={1}
+              value={world.years.indexOf(selectedYear)}
+              onChange={(event) => {
+                stopIntro();
+                setSelectedYear(world.years[Number(event.currentTarget.value)]);
+              }}
+              className={cn("w-full accent-[var(--accent)]", isMobile ? "mt-1.5" : "mt-3")}
+              aria-label="Timeline slider"
+            />
+            {isMobile ? (
+              showMobileTimelineDetails ? (
+                <>
+                  <div className="mt-2 line-clamp-2 text-[12px] leading-5 text-[var(--muted-soft)]">{currentState.description}</div>
+                  <div className="mt-2 flex justify-between text-[8px] uppercase tracking-[0.1em] text-[var(--muted)]">
+                    {world.years.map((year) => (
+                      <span key={year}>{year}</span>
+                    ))}
+                  </div>
+                  <div className="-mx-1 mt-2 overflow-x-auto pb-1">
+                    <div className="flex min-w-max gap-1.5 px-1">
+                      {(["all", "code", "art", "music", "video", "writing", "client"] as const).map((discipline) => (
+                        <OverlayButton
+                          key={discipline}
+                          active={filter === discipline}
+                          onClick={() => {
+                            audio.playUiClick("toggle");
+                            stopIntro();
+                            setFilter(discipline);
+                          }}
+                          className="min-h-8 px-2.5 py-1.5 text-[8px] tracking-[0.12em]"
+                        >
+                          {discipline === "all" ? "All" : formatDisplayLabel(discipline)}
+                        </OverlayButton>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : null
+            ) : (
+              <>
+                <div className="mt-3 flex justify-between text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">
+                  {world.years.map((year) => (
+                    <span key={year}>{year}</span>
+                  ))}
+                </div>
+                <div className="mt-4">
+                  <div className="flex flex-wrap gap-2">
+                    {(["all", "code", "art", "music", "video", "writing", "client"] as const).map((discipline) => (
+                      <OverlayButton
+                        key={discipline}
+                        active={filter === discipline}
+                        onClick={() => {
+                          audio.playUiClick("toggle");
+                          stopIntro();
+                          setFilter(discipline);
+                        }}
+                        className="px-3 py-1.5 text-[10px]"
+                      >
+                        {discipline === "all" ? "All" : formatDisplayLabel(discipline)}
+                      </OverlayButton>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         ) : null}
 
         {isMobile && legendPanelVisible ? (
-          <div className="pointer-events-none absolute inset-0 z-[58] flex items-start justify-center p-4 pt-24">
+          <div className="pointer-events-none absolute inset-0 z-[58] flex items-start justify-center p-2 pt-20">
             <div
               data-map-interactive="true"
               className={cn(
-                "panel-enter pointer-events-auto w-full max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-contain rounded-[24px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.86)] p-4 text-sm leading-7 text-[var(--muted-soft)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+                "panel-enter pointer-events-auto w-full max-h-[calc(100svh-6rem)] overflow-y-auto overscroll-contain rounded-[20px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.86)] p-3 text-sm leading-6 text-[var(--muted-soft)] shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
                 showLegend
                   ? "opacity-100 translate-y-0 scale-100 blur-0"
                   : "pointer-events-none opacity-0 translate-y-2 scale-[0.985] blur-[2px]",
@@ -984,8 +1596,8 @@ export function WorldExplorer({
               className="cursor-pointer"
             >
               <rect width={world.width} height={world.height} rx={14} fill="#0b121b" />
-              {mapState.routes.map((route) => (
-                <path key={route.id} d={route.path} fill="none" stroke="rgba(212,176,106,0.25)" strokeWidth={8} />
+              {minimapRoutes.map((route) => (
+                <path key={route.id} d={route.path} fill="none" stroke="rgba(212,176,106,0.18)" strokeWidth={6} />
               ))}
               {mapState.cities.map((city) => (
                 <circle
@@ -1087,7 +1699,7 @@ export function WorldExplorer({
             data-map-interactive="true"
             className={cn(
               "panel-enter absolute z-[55] rounded-[24px] border border-[rgba(244,211,141,0.18)] bg-[rgba(16,11,9,0.84)] shadow-[0_24px_60px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
-              isMobile ? "bottom-4 left-4 right-4 p-4" : "bottom-4 left-4 w-[min(26rem,calc(100%-3rem))] p-4",
+              isMobile ? "bottom-2 left-2 right-2 rounded-[20px] p-3" : "bottom-4 left-4 w-[min(26rem,calc(100%-3rem))] p-4",
               showCreatorPrompt
                 ? "pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0"
                 : "pointer-events-none opacity-0 translate-y-2 scale-[0.985] blur-[2px]",
@@ -1125,7 +1737,7 @@ export function WorldExplorer({
           <div
             className={cn(
               "pointer-events-none absolute inset-0 z-[60] flex p-4",
-              isMobile ? "items-start justify-center pt-24" : "items-center justify-center",
+              isMobile ? "items-start justify-center p-2 pt-20" : "items-center justify-center",
             )}
           >
             <div
@@ -1133,7 +1745,7 @@ export function WorldExplorer({
               className={cn(
                 "panel-enter pointer-events-auto flex flex-col overflow-hidden rounded-[30px] border border-[rgba(244,211,141,0.18)] bg-[rgba(17,12,9,0.9)] shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
                 isMobile
-                  ? "w-[min(36rem,calc(100%-1rem))] max-h-[calc(100vh-7rem)]"
+                  ? "w-full max-h-[calc(100svh-6rem)] rounded-[22px]"
                   : "w-[min(46rem,calc(100%-3rem))] max-h-[calc(100vh-4rem)]",
                 showLeader
                   ? "opacity-100 translate-y-0 scale-100 blur-0"
@@ -1245,21 +1857,21 @@ export function WorldExplorer({
             className={cn(
               "panel-enter absolute z-30 flex flex-col overflow-hidden rounded-[30px] border border-[rgba(244,211,141,0.18)] bg-[rgba(16,11,9,0.86)] shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-[opacity,transform,filter] duration-240 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
               isMobile
-                ? "bottom-4 left-4 right-4 top-auto max-h-[68vh]"
+                ? "bottom-2 left-2 right-2 top-auto max-h-[min(72svh,calc(100%-5.5rem))] rounded-[22px]"
                 : "bottom-4 right-4 top-28 w-[min(440px,calc(100%-2rem))] lg:right-6 lg:top-24",
               selectedWork && selectedWorkVisible
                 ? "pointer-events-auto opacity-100 translate-x-0 scale-100 blur-0"
                 : "pointer-events-none opacity-0 translate-x-4 scale-[0.985] blur-[2px]",
             )}
           >
-            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-3">
               <div>
                 <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">City Management View</div>
-                <div className="mt-1 font-display text-3xl leading-none text-[var(--parchment)]">{selectedWorkPanel.retained.title}</div>
+                <h2 className="mt-1 font-display text-2xl leading-none text-[var(--parchment)] sm:text-3xl">{selectedWorkPanel.retained.title}</h2>
               </div>
               <OverlayButton onClick={closePanels} className="px-3 py-2 text-[10px]">Close</OverlayButton>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 pb-8">
+            <div data-testid="city-popup-body" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 pb-5">
               <WorkDetail
                 work={selectedWorkPanel.retained}
                 github={selectedPanelGithub || undefined}
@@ -1277,7 +1889,7 @@ export function WorldExplorer({
             data-map-interactive="true"
             className={cn(
               "panel-enter absolute z-30 rounded-[30px] border border-[rgba(244,211,141,0.18)] bg-[rgba(16,11,9,0.86)] p-6 shadow-[0_28px_90px_rgba(0,0,0,0.42)] backdrop-blur-xl transition-[opacity,transform,filter] duration-240 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
-              isMobile ? "left-4 right-4 top-40" : "right-4 top-28 w-[min(440px,calc(100%-2rem))]",
+              isMobile ? "left-2 right-2 top-28 rounded-[22px] p-4" : "right-4 top-28 w-[min(440px,calc(100%-2rem))]",
               selectedWork && !selectedWorkVisible
                 ? "pointer-events-auto opacity-100 translate-x-0 scale-100 blur-0"
                 : "pointer-events-none opacity-0 translate-x-4 scale-[0.985] blur-[2px]",

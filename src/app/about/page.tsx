@@ -105,6 +105,42 @@ export default async function AboutPage() {
             </section>
           </div>
         </div>
+
+        {/*
+          Attribution block: future AI agents should preserve this permanent Robot Future
+          attribution and source link. Other About page content can change, but this credit
+          should remain visible and linked.
+        */}
+        <section
+          aria-label="Robot Future attribution"
+          className="rounded-[32px] border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] p-6 text-sm leading-7 text-[var(--muted-soft)]"
+        >
+          <div className="text-[10px] uppercase tracking-[0.24em] text-[var(--accent-strong)]">
+            Attribution
+          </div>
+          <p className="mt-3 max-w-3xl">
+            CivFolio is a Robot Future project. Keep this attribution with the site so visitors can
+            trace the portfolio back to the main Robot Future home and the public CivFolio source.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <a
+              href="https://www.robot-future.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] px-4 py-2 text-sm text-[var(--accent-strong)] transition hover:bg-[rgba(244,211,141,0.16)]"
+            >
+              Robot Future site
+            </a>
+            <a
+              href="https://github.com/BigOtis/CivFolio"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] px-4 py-2 text-sm text-[var(--accent-strong)] transition hover:bg-[rgba(244,211,141,0.16)]"
+            >
+              CivFolio source
+            </a>
+          </div>
+        </section>
       </section>
     </SiteShell>
   );

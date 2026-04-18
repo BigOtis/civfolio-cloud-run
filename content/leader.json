@@ -1,8 +1,8 @@
 {
   "name": "Phil Lopez",
-  "headline": "Leader of a builder civilization spanning AI systems, public experiments, and game development.",
-  "currentRole": "IBM Software Engineer",
-  "summary": "Phil Lopez leads a small but fast-moving civilization of AI systems, support automations, public-facing experiments, and game projects. His career at IBM began in frontline support and automation, where he built developer tools, codified operational knowledge, and turned repeated engineering pain into reusable systems. That path matured into AI-focused product work for the z/OS organization, where he now helps ship practical AI capabilities and agent-driven workflows, including work related to Bob.",
+  "headline": "Leader of a builder civilization spanning shipped games, public websites, AI experiments, and product-minded engineering.",
+  "currentRole": "IBM AI and Machine Learning Engineer",
+  "summary": "Phil Lopez is a builder who likes turning side ideas into real internet artifacts: websites, AI products, portfolio frameworks, and games that people can actually play. Outside IBM, a lot of the energy goes into public-world projects like Robot Future, PopCurrent, SlopSwapper, and CivFolio, plus long-running Unreal Engine work such as Buster's TD and LocalTalker. That mix of product instinct, front-end execution, storytelling, and systems thinking is the center of the profile. IBM is still an important part of the arc, but the broader story is about shipping things under his own banner, making them public, and building a body of work that spans code, design, writing, and game development.",
   "philosophy": [
     "Build real systems that increase the output of the people using them.",
     "Use AI to remove repetitive labor so human attention can move up the stack.",
@@ -10,17 +10,18 @@
   ],
   "disciplines": ["code", "art", "writing", "client"],
   "featuredSkills": [
-    "JavaScript and Python product development",
-    "AI and OpenAI API integration",
-    "Infrastructure and support automation",
-    "React, Node.js, MongoDB, and cloud delivery",
-    "Unreal Engine prototyping"
+    "Shipping public websites and product-style landing pages",
+    "Building AI products and OpenAI-powered experiments",
+    "React, TypeScript, Node.js, MongoDB, and cloud delivery",
+    "Unreal Engine game development and gameplay prototyping",
+    "Packaging technical work into brands, videos, and public artifacts"
   ],
   "achievements": [
-    "Built award-winning automation systems and developer tools across IBM support and infrastructure workflows.",
-    "Now serves as a software engineer focused on AI initiatives for the IBM z/OS organization.",
+    "Built and shipped public websites, AI experiments, and portfolio products under the Robot Future umbrella.",
+    "Developed Unreal Engine game work and shipped Buster's TD on Steam as part of a broader game-development arc.",
+    "Built projects that span websites, media, AI tooling, satire, and game systems rather than staying inside one lane.",
     "Graduated from RIT with a BS/MS in Computer Science.",
-    "Shipped public AI experiments, a live tech brand, a portfolio framework, and an Unreal Engine game project."
+    "Also works as an AI and machine learning engineer on initiatives for the IBM z/OS organization, bringing enterprise systems rigor into independent builds."
   ],
   "contactLinks": [
     { "label": "Email", "url": "mailto:phil.lopezdev@gmail.com" },

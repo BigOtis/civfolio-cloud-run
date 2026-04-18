@@ -5,7 +5,7 @@ import { Application, Circle, Container, Graphics, Text } from "pixi.js";
 import { Viewport } from "pixi-viewport";
 
 import { clamp, getImprovementKind, getRoutePoint } from "@/components/world/world-explorer-support";
-import type { RenderCity, WorldRenderModel, WorldState } from "@/lib/content/derive";
+import type { RenderCity, WorldRenderModel, WorldRoute, WorldState } from "@/lib/content/derive";
 import type { SiteConfig, Work } from "@/lib/content/schema";
 
 const terrainFill = {
@@ -148,6 +148,17 @@ const cityBannerOffsetY: Record<string, number> = {
   civfolio: -56,
 };
 
+const routeStyle: Record<
+  WorldRoute["type"],
+  { color: number; alpha: number; shadowAlpha: number; width: number; shadowWidth: number }
+> = {
+  integration: { color: 0xe0c27f, alpha: 0.42, shadowAlpha: 0.18, width: 1.9, shadowWidth: 5.6 },
+  trade: { color: 0xc5d1a5, alpha: 0.36, shadowAlpha: 0.14, width: 1.7, shadowWidth: 5 },
+  series: { color: 0xf1cf8b, alpha: 0.48, shadowAlpha: 0.2, width: 2.1, shadowWidth: 5.8 },
+  team: { color: 0x9ad5f6, alpha: 0.38, shadowAlpha: 0.14, width: 1.8, shadowWidth: 5 },
+  inspiration: { color: 0xbda27a, alpha: 0.24, shadowAlpha: 0.08, width: 1.2, shadowWidth: 3.6 },
+};
+
 type CameraState = {
   zoom: number;
   x: number;
@@ -226,6 +237,8 @@ declare global {
       zoomCameraOnCity: (slug: string, delta: number) => boolean;
       getDebug: () => {
         cityCount: number;
+        routeCount: number;
+        routePathCount: number;
         unitCount: number;
         sceneVersion: number;
         camera: { x: number; y: number; zoom: number } | null;
@@ -355,6 +368,18 @@ function addSimplePath(container: Container, path: string, color: number, width:
 
   graphic.stroke({ width, color, alpha, cap: "round", join: "round" });
   container.addChild(graphic);
+}
+
+function getDisplayedRoutes(routes: WorldRoute[], visibleCities: RenderCity[]) {
+  const visibleCitySlugs = new Set(visibleCities.map((city) => city.slug));
+
+  return routes.filter((route) => {
+    if (!visibleCitySlugs.has(route.from) || !visibleCitySlugs.has(route.to)) {
+      return false;
+    }
+
+    return route.type !== "inspiration";
+  });
 }
 
 function drawImprovement(label: string, tone: string) {
@@ -1433,7 +1458,7 @@ export function WorldMapPixi({
         }
 
         const anchor = viewport.toScreen(node.worldX, node.worldY);
-        const nextZoom = clamp(viewport.scale.x * Math.exp(delta), 0.58, 1.52);
+        const nextZoom = clamp(viewport.scale.x * Math.exp(delta), 0.38, 1.52);
         const marginX = Math.min(220, Math.max(96, host.clientWidth * 0.18));
         const marginY = Math.min(180, Math.max(72, host.clientHeight * 0.18));
         const minX = host.clientWidth - staticWorldWidth * nextZoom - marginX;
@@ -1454,6 +1479,8 @@ export function WorldMapPixi({
       },
       getDebug: () => ({
         cityCount: sceneRef.current?.cityNodes.size ?? 0,
+        routeCount: Math.floor((sceneRef.current?.routeLayer.children.length ?? 0) / 2),
+        routePathCount: sceneRef.current?.routeLayer.children.length ?? 0,
         unitCount: sceneRef.current?.unitNodes.size ?? 0,
         sceneVersion,
         camera: viewportRef.current
@@ -1549,7 +1576,7 @@ export function WorldMapPixi({
         viewport.wheel({ smooth: 4, wheelZoom: true, trackpadPinch: true });
         viewport.decelerate({ friction: 0.92 });
         viewport.clamp({ direction: "all", underflow: "center" });
-        viewport.clampZoom({ minScale: 0.58, maxScale: 1.52 });
+        viewport.clampZoom({ minScale: 0.38, maxScale: 1.52 });
         viewport.eventMode = "static";
         viewport.sortableChildren = true;
 
@@ -2038,19 +2065,11 @@ export function WorldMapPixi({
     scene.greatWorkNodes.clear();
     scene.unitNodes.clear();
 
-    const visibleCitySlugs = new Set(visibleCities.map((city) => city.slug));
-
-    currentState.routes
-      .filter((route) => {
-        if (currentState.cities.length === visibleCities.length) {
-          return true;
-        }
-        return visibleCitySlugs.has(route.from) || visibleCitySlugs.has(route.to);
-      })
-      .forEach((route) => {
-        addSimplePath(scene.routeLayer, route.path, 0x080403, 8, 0.42);
-        addSimplePath(scene.routeLayer, route.path, 0xf1cf8b, 3.2, 0.72);
-      });
+    getDisplayedRoutes(currentState.routes, visibleCities).forEach((route) => {
+      const style = routeStyle[route.type];
+      addSimplePath(scene.routeLayer, route.path, 0x080403, style.shadowWidth, style.shadowAlpha);
+      addSimplePath(scene.routeLayer, route.path, style.color, style.width, style.alpha);
+    });
 
     visibleCities.forEach((city) => {
       const work = workBySlug.get(city.slug);
@@ -2060,7 +2079,7 @@ export function WorldMapPixi({
           new Set(
             [
               ...work.techTree.slice(0, 2),
-              ...(city.slug === "robot-future" || city.slug === "ibm-support-innovation" ? ["Agentic AI"] : []),
+              ...(city.slug === "robot-future" || city.slug === "ibm-ai-machine-learning-engineer" ? ["Agentic AI"] : []),
             ].filter(Boolean),
           ),
         ).slice(0, 3);

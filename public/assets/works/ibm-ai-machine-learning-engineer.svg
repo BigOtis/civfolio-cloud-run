@@ -1,0 +1,14 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#101827"/>
+  <path d="M0 486L176 404L354 448L556 294L754 340L1200 196V720H0V486Z" fill="#2D455E"/>
+  <path d="M260 504H944V292L602 132L260 292V504Z" fill="#536B88"/>
+  <path d="M260 292L602 132L944 292" fill="#B9C7F4"/>
+  <path d="M374 350H830" stroke="#182438" stroke-width="12" stroke-linecap="round"/>
+  <path d="M374 418H830" stroke="#182438" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="602" cy="348" r="76" fill="#101827" stroke="#D7E0FF" stroke-width="12"/>
+  <circle cx="602" cy="348" r="20" fill="#D7E0FF"/>
+  <path d="M602 272V246M602 450V424M526 348H500M704 348H678M548 294L530 276M674 420L656 402M656 294L674 276M530 420L548 402" stroke="#D7E0FF" stroke-width="10" stroke-linecap="round"/>
+  <path d="M236 548L964 548" stroke="#D7E0FF" stroke-width="10" stroke-dasharray="16 14"/>
+  <rect x="146" y="556" width="908" height="76" rx="18" fill="#0B111D" fill-opacity="0.82"/>
+  <text x="184" y="603" fill="#D7E0FF" font-size="36" font-family="Georgia, serif">IBM AI and Machine Learning Engineer</text>
+</svg>
