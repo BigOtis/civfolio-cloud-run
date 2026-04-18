@@ -117,76 +117,64 @@ export function WorkDetail({
           <span className="rounded-full border border-white/10 px-2.5 py-1">{work.startYear}</span>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-[1.15fr_0.85fr]">
-          <div className="space-y-3">
-            <section className="space-y-2 text-[13px] leading-6 text-[var(--muted-soft)]">
-              {work.description.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
-            </section>
+        {hero ? (
+          <figure className="overflow-hidden rounded-[18px] border border-[rgba(244,211,141,0.18)] bg-black/20">
+            <Image
+              src={hero.src}
+              alt={hero.alt}
+              width={900}
+              height={540}
+              className="h-40 w-full object-cover object-center"
+              loading="eager"
+              unoptimized
+            />
+          </figure>
+        ) : null}
 
-            <section className="grid gap-2">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-[var(--accent-strong)]">
-                Why it matters
+        <section className="space-y-3 rounded-[18px] border border-white/10 bg-[rgba(255,255,255,0.035)] px-4 py-3 text-sm leading-7 text-[var(--muted-soft)]">
+          {work.description.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </section>
+
+        <section className="grid gap-2">
+          <div className="text-[10px] uppercase tracking-[0.22em] text-[var(--accent-strong)]">
+            Why it matters
+          </div>
+          {work.highlights.slice(0, 3).map((item) => (
+            <div
+              key={item}
+              className="rounded-[14px] border border-white/10 bg-[rgba(255,255,255,0.045)] px-3 py-2.5 text-[13px] leading-6 text-[var(--muted-soft)]"
+            >
+              {item}
+            </div>
+          ))}
+        </section>
+
+        {compactProof.length > 0 ? (
+          <section className="grid gap-2">
+            <div className="text-[10px] uppercase tracking-[0.22em] text-[var(--accent-strong)]">
+              Proof
+            </div>
+            {compactProof.map((item) => (
+              <div key={item.title} className="rounded-[14px] border border-[rgba(244,211,141,0.18)] bg-black/20 px-3 py-2.5">
+                <div className="text-base leading-5 text-[var(--parchment)]">{item.title}</div>
+                <div className="mt-1 text-xs leading-5 text-[var(--muted-soft)]">{item.summary}</div>
               </div>
-              {work.highlights.slice(0, 2).map((item) => (
-                <div
-                  key={item}
-                  className="rounded-[14px] border border-white/10 bg-[rgba(255,255,255,0.045)] px-3 py-2 text-[13px] leading-5 text-[var(--muted-soft)]"
-                  style={{ display: "-webkit-box", overflow: "hidden", WebkitBoxOrient: "vertical", WebkitLineClamp: 2 }}
-                >
-                  {item}
-                </div>
-              ))}
-            </section>
-          </div>
+            ))}
+          </section>
+        ) : null}
 
-          <div className="space-y-3">
-            {hero ? (
-              <figure className="overflow-hidden rounded-[18px] border border-[rgba(244,211,141,0.18)] bg-black/20">
-                <Image
-                  src={hero.src}
-                  alt={hero.alt}
-                  width={900}
-                  height={540}
-                  className="h-36 w-full object-cover object-center"
-                  loading="eager"
-                  unoptimized
-                />
-              </figure>
-            ) : null}
-
-            {compactProof.length > 0 ? (
-              <section className="grid gap-2">
-                <div className="text-[10px] uppercase tracking-[0.22em] text-[var(--accent-strong)]">
-                  Proof
-                </div>
-                {compactProof.map((item) => (
-                  <div key={item.title} className="rounded-[14px] border border-[rgba(244,211,141,0.18)] bg-black/20 px-3 py-2">
-                    <div className="text-sm leading-5 text-[var(--parchment)]">{item.title}</div>
-                    <div
-                      className="mt-0.5 text-[11px] leading-4 text-[var(--muted-soft)]"
-                      style={{ display: "-webkit-box", overflow: "hidden", WebkitBoxOrient: "vertical", WebkitLineClamp: 1 }}
-                    >
-                      {item.summary}
-                    </div>
-                  </div>
-                ))}
-              </section>
-            ) : null}
-
-            <section className="flex flex-wrap gap-1.5">
-              {compactChips.slice(0, 5).map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] leading-5 text-[var(--muted-soft)]"
-                >
-                  {item}
-                </span>
-              ))}
-            </section>
-          </div>
-        </div>
+        <section className="flex flex-wrap gap-1.5">
+          {compactChips.slice(0, 8).map((item) => (
+            <span
+              key={item}
+              className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] leading-5 text-[var(--muted-soft)]"
+            >
+              {item}
+            </span>
+          ))}
+        </section>
 
         <div className="flex flex-wrap gap-2 pt-1">
           {work.links.slice(0, 2).map((link) => (

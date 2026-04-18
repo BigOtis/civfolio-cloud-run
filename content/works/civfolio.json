@@ -13,8 +13,8 @@
   "startYear": 2026,
   "tags": ["nextjs", "portfolio", "framework", "react", "open-source"],
   "map": {
-    "x": 1016,
-    "y": 604,
+    "x": 760,
+    "y": 730,
     "terrain": "plains",
     "region": "Cartographer's Reach",
     "bannerTone": "#e1c37a"

@@ -390,6 +390,34 @@ test.describe("world map interactions", () => {
     expect(routeDebug?.routePathCount ?? 0).toBe((routeDebug?.routeCount ?? 0) * 2);
   });
 
+  test("great work text overlays render above city labels", async ({ page }) => {
+    await openWorldMap(page);
+
+    await skipIntro(page);
+
+    const debug = await page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getDebug() ?? null);
+
+    expect(debug?.greatWorkLabelCount ?? 0).toBeGreaterThan(0);
+    expect(debug?.layerOrder?.greatWorks ?? Number.POSITIVE_INFINITY).toBeLessThan(
+      debug?.layerOrder?.cities ?? Number.NEGATIVE_INFINITY,
+    );
+    expect(debug?.layerOrder?.greatWorkLabels ?? Number.NEGATIVE_INFINITY).toBeGreaterThan(
+      debug?.layerOrder?.cities ?? Number.POSITIVE_INFINITY,
+    );
+  });
+
+  test("CivFolio and Buster's TD cities stay visually separated", async ({ page }) => {
+    await openWorldMap(page);
+
+    await skipIntro(page);
+
+    const civfolio = await getCityMetrics(page, "civfolio");
+    const busters = await getCityMetrics(page, "busters-td");
+    const distance = Math.hypot(civfolio.x - busters.x, civfolio.y - busters.y);
+
+    expect(distance).toBeGreaterThan(civfolio.radius + busters.radius + 48);
+  });
+
   test("city pitch popups keep previews and dossier links for every visible city", async ({ browser }) => {
     const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
     await openWorldMap(page);
@@ -694,7 +722,7 @@ test.describe("world map interactions", () => {
 
     await expect
       .poll(async () => page.evaluate(() => window.__CIVFOLIO_MAP_TEST__?.getDebug().camera?.zoom ?? 1))
-      .toBeLessThanOrEqual(0.52);
+      .toBeLessThanOrEqual(0.56);
     const narrowOverviewCities = await page.evaluate(() => {
       const viewport = { width: window.innerWidth, height: window.innerHeight };
       return ["robot-future", "localtalker"].map((slug) => ({

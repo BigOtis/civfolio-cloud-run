@@ -208,6 +208,7 @@ type SceneRefs = {
   improvementLayer: Container;
   greatWorkLayer: Container;
   cityLayer: Container;
+  greatWorkLabelLayer: Container;
   unitLayer: Container;
   cityNodes: Map<string, CityNode>;
   greatWorkNodes: Map<string, GreatWorkNode>;
@@ -237,6 +238,8 @@ declare global {
       zoomCameraOnCity: (slug: string, delta: number) => boolean;
       getDebug: () => {
         cityCount: number;
+        greatWorkLabelCount: number;
+        layerOrder: { greatWorks: number; cities: number; greatWorkLabels: number } | null;
         routeCount: number;
         routePathCount: number;
         unitCount: number;
@@ -1169,6 +1172,7 @@ function createScene(viewport: Viewport) {
   const improvementLayer = new Container();
   const greatWorkLayer = new Container();
   const cityLayer = new Container();
+  const greatWorkLabelLayer = new Container();
   const unitLayer = new Container();
 
   terrainLayer.label = "terrain";
@@ -1176,9 +1180,11 @@ function createScene(viewport: Viewport) {
   improvementLayer.label = "improvements";
   greatWorkLayer.label = "greatWorks";
   cityLayer.label = "cities";
+  greatWorkLabelLayer.label = "greatWorkLabels";
   unitLayer.label = "units";
+  greatWorkLabelLayer.sortableChildren = true;
 
-  viewport.addChild(terrainLayer, routeLayer, improvementLayer, greatWorkLayer, cityLayer, unitLayer);
+  viewport.addChild(terrainLayer, routeLayer, improvementLayer, greatWorkLayer, cityLayer, greatWorkLabelLayer, unitLayer);
 
   return {
     terrainLayer,
@@ -1186,6 +1192,7 @@ function createScene(viewport: Viewport) {
     improvementLayer,
     greatWorkLayer,
     cityLayer,
+    greatWorkLabelLayer,
     unitLayer,
     cityNodes: new Map<string, CityNode>(),
     greatWorkNodes: new Map<string, GreatWorkNode>(),
@@ -1479,6 +1486,15 @@ export function WorldMapPixi({
       },
       getDebug: () => ({
         cityCount: sceneRef.current?.cityNodes.size ?? 0,
+        greatWorkLabelCount: sceneRef.current?.greatWorkLabelLayer.children.length ?? 0,
+        layerOrder:
+          sceneRef.current && viewportRef.current
+            ? {
+                greatWorks: viewportRef.current.children.indexOf(sceneRef.current.greatWorkLayer),
+                cities: viewportRef.current.children.indexOf(sceneRef.current.cityLayer),
+                greatWorkLabels: viewportRef.current.children.indexOf(sceneRef.current.greatWorkLabelLayer),
+              }
+            : null,
         routeCount: Math.floor((sceneRef.current?.routeLayer.children.length ?? 0) / 2),
         routePathCount: sceneRef.current?.routeLayer.children.length ?? 0,
         unitCount: sceneRef.current?.unitNodes.size ?? 0,
@@ -2060,6 +2076,7 @@ export function WorldMapPixi({
     scene.improvementLayer.removeChildren().forEach((child) => child.destroy({ children: true }));
     scene.greatWorkLayer.removeChildren().forEach((child) => child.destroy({ children: true }));
     scene.cityLayer.removeChildren().forEach((child) => child.destroy({ children: true }));
+    scene.greatWorkLabelLayer.removeChildren().forEach((child) => child.destroy({ children: true }));
     scene.unitLayer.removeChildren().forEach((child) => child.destroy({ children: true }));
     scene.cityNodes.clear();
     scene.greatWorkNodes.clear();
@@ -2131,15 +2148,17 @@ export function WorldMapPixi({
           const dot = new Graphics();
           dot.circle(16, 21, 4.5).fill({ color: toPixiColor(city.bannerTone), alpha: 0.82 });
           label.addChild(dot);
+          label.position.set(root.x, root.y);
+          label.zIndex = 80;
           label.visible = hoveredGreatWorkRef.current === key;
           label.eventMode = "none";
-          root.addChild(label);
 
           root.alpha = hoveredGreatWorkRef.current === key ? 1 : selectedSlugRef.current && selectedSlugRef.current !== city.slug ? 0.5 : 0.82;
           root.on("pointerenter", () => callbacksRef.current.onSetHoveredGreatWork(key));
           root.on("pointerleave", () => callbacksRef.current.onSetHoveredGreatWork(null));
 
           scene.greatWorkLayer.addChild(root);
+          scene.greatWorkLabelLayer.addChild(label);
           scene.greatWorkNodes.set(key, {
             root,
             monument,
