@@ -639,7 +639,7 @@ export function WorldExplorer({
     const viewportWidth = viewportSize.width;
     const viewportHeight = viewportSize.height;
     const desiredX = viewportWidth * 0.5 - x * introZoom;
-    const desiredY = viewportHeight * (isMobile ? 0.58 : 0.56) - y * introZoom;
+    const desiredY = viewportHeight * (isMobile ? 0.46 : 0.56) - y * introZoom;
 
     setCameraTarget({
       zoom: introZoom,
@@ -959,12 +959,12 @@ export function WorldExplorer({
   }, [containerSize.height, containerSize.width, pathname, router, searchParams]);
 
   return (
-    <section className="select-none px-2 pb-2 sm:px-4 sm:pb-4 lg:px-6">
+    <section className="select-none px-1 pb-1 sm:px-4 sm:pb-4 lg:px-6">
       <div
         ref={containerRef}
         data-map-drag-surface="true"
         className={cn(
-          "relative isolate min-h-[calc(100svh-4.75rem)] overflow-hidden rounded-[24px] border border-[rgba(244,211,141,0.18)] bg-[radial-gradient(circle_at_top,_rgba(70,120,160,0.28),_rgba(11,12,17,0.98)_56%)] shadow-[0_40px_120px_rgba(0,0,0,0.42)] sm:min-h-[calc(100vh-6.75rem)] sm:rounded-[34px]",
+          "relative isolate min-h-[calc(100svh-3.75rem)] overflow-hidden rounded-[18px] border border-[rgba(244,211,141,0.18)] bg-[radial-gradient(circle_at_top,_rgba(70,120,160,0.28),_rgba(11,12,17,0.98)_56%)] shadow-[0_40px_120px_rgba(0,0,0,0.42)] sm:min-h-[calc(100vh-6.75rem)] sm:rounded-[34px]",
           isDragging ? "cursor-grabbing" : "cursor-grab",
         )}
       >
@@ -1007,24 +1007,32 @@ export function WorldExplorer({
         <div
           className={cn(
             "pointer-events-none absolute z-20",
-            isMobile ? "inset-x-2 top-2" : "inset-x-4 top-4 flex items-start justify-between gap-4 flex-wrap",
+            isMobile ? "inset-x-1.5 top-1.5" : "inset-x-4 top-4 flex items-start justify-between gap-4 flex-wrap",
           )}
         >
           {isMobile ? (
             <div
               data-testid="mobile-hud"
-              className="hud-drift pointer-events-auto rounded-[18px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.72)] px-2.5 py-2 shadow-[0_20px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl"
+              className="hud-drift pointer-events-auto rounded-[14px] border border-[rgba(244,211,141,0.14)] bg-[rgba(14,10,8,0.7)] px-2 py-1.5 shadow-[0_16px_36px_rgba(0,0,0,0.28)] backdrop-blur-xl"
             >
-              <div className="flex flex-wrap items-start justify-between gap-1.5">
-                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <span className="rounded-full border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] px-2 py-1 text-[8px] uppercase tracking-[0.14em] text-[var(--accent-strong)]">
-                    World Map
-                  </span>
-                  <span className="rounded-full border border-white/10 px-2 py-1 text-[8px] uppercase tracking-[0.12em] text-[var(--muted)]">
-                    {currentState.label}
-                  </span>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                <div className="min-w-0">
+                  <div className="flex min-w-0 flex-wrap items-center gap-1">
+                    <span className="rounded-full border border-[var(--accent)] bg-[rgba(244,211,141,0.08)] px-2 py-0.5 text-[7px] uppercase tracking-[0.12em] text-[var(--accent-strong)]">
+                      World Map
+                    </span>
+                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[7px] uppercase tracking-[0.1em] text-[var(--muted)]">
+                      {currentState.label}
+                    </span>
+                  </div>
+                  <h1 className="mt-1 font-display text-[1rem] leading-none text-[var(--parchment)]">
+                    {leader.name}
+                    <span className="mt-0.5 block text-[7px] uppercase tracking-[0.1em] text-[var(--accent-strong)]">
+                      Strategy Map of Work
+                    </span>
+                  </h1>
                 </div>
-                <div className="flex shrink-0 items-center gap-1.5">
+                <div className="flex shrink-0 items-center gap-1">
                   <OverlayButton
                     active={showLeader}
                     aria-label="Leader Profile"
@@ -1035,7 +1043,7 @@ export function WorldExplorer({
                       setShowLeader((value) => !value);
                       updateWorkInRoute();
                     }}
-                    className="min-h-8 px-2.5 py-1.5 text-[8px] tracking-[0.12em]"
+                    className="min-h-7 px-2 py-1 text-[7px] tracking-[0.1em]"
                   >
                     Leader
                   </OverlayButton>
@@ -1046,23 +1054,17 @@ export function WorldExplorer({
                       setShowMobileTimelineDetails(false);
                       setShowMobileControls((value) => !value);
                     }}
-                    className="min-h-8 px-2.5 py-1.5 text-[8px] tracking-[0.12em]"
+                    className="min-h-7 px-2 py-1 text-[7px] tracking-[0.1em]"
                   >
                     Controls
                   </OverlayButton>
                 </div>
               </div>
-              <h1 className="mt-1.5 font-display text-[1.16rem] leading-none text-[var(--parchment)]">
-                {leader.name}
-                <span className="mt-0.5 block text-[8px] uppercase tracking-[0.12em] text-[var(--accent-strong)]">
-                  Strategy Map of Work
-                </span>
-              </h1>
 
               {showMobileControls ? (
                 <div
                   data-testid="mobile-controls-panel"
-                  className="mt-2 grid grid-cols-3 gap-1.5 border-t border-white/10 pt-2"
+                  className="mt-1.5 grid grid-cols-3 gap-1.5 border-t border-white/10 pt-1.5"
                 >
                   <OverlayButton
                     onClick={() => {
@@ -1247,44 +1249,45 @@ export function WorldExplorer({
               data-testid="intro-panel"
               className={cn(
                 "panel-enter hud-drift rounded-[26px] border border-[rgba(244,211,141,0.18)] bg-[rgba(17,12,9,0.72)] text-center shadow-[0_24px_70px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
-                isMobile ? "w-full max-h-[min(28rem,calc(100svh-10rem))] overflow-y-auto overscroll-contain rounded-[20px] px-3 py-3" : "w-[min(30rem,100%)] px-5 py-4",
+                isMobile ? "w-full max-w-[23rem] rounded-[16px] px-3 py-2.5" : "w-[min(30rem,100%)] px-5 py-4",
                 introActive
                   ? "pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0"
                   : "pointer-events-none opacity-0 -translate-y-3 scale-[0.985] blur-[2px]",
               )}
             >
-              <div className="text-[10px] uppercase tracking-[0.28em] text-[var(--accent-strong)]">
+              <div className={cn("uppercase text-[var(--accent-strong)]", isMobile ? "text-[8px] tracking-[0.2em]" : "text-[10px] tracking-[0.28em]")}>
                 Campaign Replay · {introIndex + 1}/{introSequence.length}
               </div>
               <div
                 data-testid="intro-title"
-                className={cn("mt-2 font-display text-[var(--parchment)]", isMobile ? "text-[1.6rem] leading-none" : "text-3xl")}
+                className={cn("font-display text-[var(--parchment)]", isMobile ? "mt-1 text-[1.35rem] leading-none" : "mt-2 text-3xl")}
               >
                 Founding {currentIntroWork.title}
               </div>
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]">
-                <span className="rounded-full border border-white/10 px-3 py-1">{currentIntroWork.era}</span>
-                <span className="rounded-full border border-white/10 px-3 py-1">{currentIntroWork.startYear}</span>
-                <span className="rounded-full border border-white/10 px-3 py-1">{formatDisciplineLabel(currentIntroWork.discipline)}</span>
+              <div className={cn("flex flex-wrap items-center justify-center uppercase text-[var(--muted)]", isMobile ? "mt-2 gap-1 text-[8px] tracking-[0.12em]" : "mt-3 gap-2 text-[10px] tracking-[0.22em]")}>
+                <span className={cn("rounded-full border border-white/10", isMobile ? "px-2 py-0.5" : "px-3 py-1")}>{currentIntroWork.era}</span>
+                <span className={cn("rounded-full border border-white/10", isMobile ? "px-2 py-0.5" : "px-3 py-1")}>{currentIntroWork.startYear}</span>
+                <span className={cn("rounded-full border border-white/10", isMobile ? "px-2 py-0.5" : "px-3 py-1")}>{formatDisciplineLabel(currentIntroWork.discipline)}</span>
               </div>
-              <p className={cn("mt-3 text-[var(--muted-soft)]", isMobile ? "text-sm leading-6" : "text-sm leading-7")}>
+              <p className={cn("text-[var(--muted-soft)]", isMobile ? "mt-2 line-clamp-2 text-[13px] leading-5" : "mt-3 text-sm leading-7")}>
                 {currentIntroWork.summary}
               </p>
-              <div className="mt-4 h-2 overflow-hidden rounded-full border border-white/10 bg-[rgba(255,255,255,0.05)]">
+              <div className={cn("overflow-hidden rounded-full border border-white/10 bg-[rgba(255,255,255,0.05)]", isMobile ? "mt-2 h-1.5" : "mt-4 h-2")}>
                 <div
                   className="h-full rounded-full bg-[linear-gradient(90deg,rgba(244,211,141,0.72),rgba(244,211,141,0.96))] transition-[width] duration-500 ease-out"
                   style={{ width: `${introProgress * 100}%` }}
                 />
               </div>
-              <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
+              <p className={cn("uppercase text-[var(--muted)]", isMobile ? "sr-only" : "mt-3 text-[11px] tracking-[0.2em]")}>
                 The world is founding itself. Drag, zoom, or open any city to take control.
               </p>
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <div className={cn("flex flex-wrap justify-center gap-2", isMobile ? "mt-2" : "mt-4")}>
                 <OverlayButton
                   onClick={() => {
                     audio.playUiClick("close");
                     stopIntro();
                   }}
+                  className={isMobile ? "min-h-8 px-4 py-1.5 text-[8px] tracking-[0.16em]" : undefined}
                 >
                   Skip Intro
                 </OverlayButton>

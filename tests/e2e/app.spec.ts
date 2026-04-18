@@ -630,6 +630,49 @@ test.describe("world map interactions", () => {
     await expect(page.getByTestId("mobile-hud")).toBeVisible();
     await expect(page.getByRole("button", { name: "Skip Intro" })).toBeVisible();
     await expect(page.getByLabel("Timeline slider")).toHaveCount(0);
+    const introMobileMetrics = await page.evaluate(() => {
+      const readBox = (selector: string) => {
+        const element = document.querySelector(selector);
+        if (!element) {
+          return null;
+        }
+        const box = element.getBoundingClientRect();
+        return {
+          top: box.top,
+          right: box.right,
+          bottom: box.bottom,
+          left: box.left,
+          width: box.width,
+          height: box.height,
+        };
+      };
+      const header = readBox("header");
+      const map = readBox("[data-map-drag-surface='true']");
+      const hud = readBox("[data-testid='mobile-hud']");
+      const intro = readBox("[data-testid='intro-panel']");
+      const laneY = hud && intro ? hud.bottom + (intro.top - hud.bottom) / 2 : 0;
+      const laneElement = document.elementFromPoint(window.innerWidth / 2, laneY);
+
+      return {
+        header,
+        map,
+        hud,
+        intro,
+        gap: hud && intro ? intro.top - hud.bottom : null,
+        laneHit: {
+          tagName: laneElement?.tagName ?? null,
+          isOverlayControl: Boolean(
+            laneElement?.closest("button, a, input, textarea, select, [data-map-interactive='true']"),
+          ),
+        },
+      };
+    });
+    expect(introMobileMetrics.header?.height ?? 999).toBeLessThan(52);
+    expect(introMobileMetrics.map?.top ?? 999).toBeLessThan(64);
+    expect(introMobileMetrics.hud?.height ?? 999).toBeLessThan(82);
+    expect(introMobileMetrics.intro?.height ?? 999).toBeLessThan(260);
+    expect(introMobileMetrics.gap ?? 0).toBeGreaterThan(260);
+    expect(introMobileMetrics.laneHit).toEqual({ tagName: "CANVAS", isOverlayControl: false });
     await page.getByRole("button", { name: "Skip Intro" }).click();
     await expect(page.getByTestId("intro-panel")).toHaveCount(0);
     await expect(page.getByTestId("mobile-timeline-shell")).toBeVisible();

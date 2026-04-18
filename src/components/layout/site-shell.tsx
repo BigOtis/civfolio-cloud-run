@@ -23,14 +23,14 @@ export function SiteShell({
       <header
         className={
           minimal
-            ? "pointer-events-none fixed inset-x-0 top-0 z-50 px-2 pt-2.5 sm:px-4 sm:pt-3"
+            ? "pointer-events-none fixed inset-x-0 top-0 z-50 px-1.5 pt-1.5 sm:px-4 sm:pt-3"
             : "sticky top-0 z-40 border-b border-white/10 bg-[rgba(15,10,8,0.72)] backdrop-blur"
         }
       >
         <div
           className={
             minimal
-              ? "pointer-events-auto mx-auto flex w-full max-w-7xl items-center justify-center gap-2 rounded-[20px] border border-[rgba(244,211,141,0.14)] bg-[rgba(12,10,9,0.58)] px-2.5 py-2 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:justify-between sm:gap-3 sm:rounded-[24px] sm:px-4 sm:py-3"
+              ? "pointer-events-auto mx-auto flex w-full max-w-7xl items-center justify-center gap-1.5 rounded-[14px] border border-[rgba(244,211,141,0.14)] bg-[rgba(12,10,9,0.58)] px-1.5 py-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:justify-between sm:gap-3 sm:rounded-[24px] sm:px-4 sm:py-3"
               : "mx-auto flex w-full max-w-7xl items-center justify-between gap-6 px-4 py-4 sm:px-6 lg:px-8"
           }
         >
@@ -45,7 +45,7 @@ export function SiteShell({
           <nav
             className={
               minimal
-                ? "flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--muted)] sm:flex-wrap sm:justify-end sm:text-[11px] sm:tracking-[0.22em]"
+                ? "flex items-center justify-center gap-1.5 text-[9px] uppercase tracking-[0.14em] text-[var(--muted)] sm:flex-wrap sm:justify-end sm:gap-2 sm:text-[11px] sm:tracking-[0.22em]"
                 : "flex flex-wrap items-center gap-2 text-sm uppercase tracking-[0.24em] text-[var(--muted)]"
             }
           >
@@ -55,7 +55,7 @@ export function SiteShell({
                 href={item.href}
                 className={
                   minimal
-                    ? "rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)] sm:px-4 sm:py-2"
+                    ? "rounded-full border border-white/10 bg-white/5 px-2.5 py-1.5 transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)] sm:px-4 sm:py-2"
                     : "rounded-full border border-white/10 bg-white/5 px-4 py-2 transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
                 }
               >
@@ -80,7 +80,7 @@ export function SiteShell({
           </nav>
         </div>
       </header>
-      <main className={minimal ? "pt-[4rem] sm:pt-[4.5rem]" : undefined}>{children}</main>
+      <main className={minimal ? "pt-[3.25rem] sm:pt-[4.5rem]" : undefined}>{children}</main>
       {minimal ? null : (
         <footer className="border-t border-white/10 bg-[rgba(15,10,8,0.82)]">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-8 text-sm text-[var(--muted)] sm:px-6 lg:px-8 md:flex-row md:items-center md:justify-between">

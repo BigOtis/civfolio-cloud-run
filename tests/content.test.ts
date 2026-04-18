@@ -7,7 +7,7 @@ describe("content loading", () => {
     const data = await getWorldData();
 
     expect(data.site.title).toBe("Phil Lopez");
-    expect(data.works).toHaveLength(10);
+    expect(data.works).toHaveLength(11);
     expect(data.works.some((work) => work.code)).toBe(true);
     expect(data.works.some((work) => work.art)).toBe(true);
     expect(data.works.some((work) => work.video)).toBe(true);
